@@ -1,0 +1,39 @@
+XH3
+H B areas 4 global symbols
+M spi
+O -mstm8
+S .__.ABS. Def000000
+A _CODE size 0 flags 0 addr 0
+A DATA size 0 flags 0 addr 0
+A INITIALIZED size 0 flags 0 addr 0
+A DABS size 0 flags 8 addr 0
+A HOME size 0 flags 0 addr 0
+A GSINIT size 0 flags 0 addr 0
+A GSFINAL size 0 flags 0 addr 0
+A CONST size 0 flags 0 addr 0
+A INITIALIZER size 0 flags 0 addr 0
+A CODE size 20 flags 0 addr 0
+S _SPI_read Def000009
+S _SPI_write Def000017
+S _SPI_init Def000000
+A CABS size 0 flags 8 addr 0
+T 00 00 00
+R 00 00 00 09
+T 00 00 00 35 54 52 00 35 C3 52 01 81
+R 00 00 00 09
+T 00 00 09
+R 00 00 00 09
+T 00 00 09 A6 FF CD 00 17
+R 00 00 00 09 00 06 00 09
+T 00 00 0E
+R 00 00 00 09
+T 00 00 0E 72 01 52 03 FB C6 52 04 81
+R 00 00 00 09
+T 00 00 17
+R 00 00 00 09
+T 00 00 17 C7 52 04
+R 00 00 00 09
+T 00 00 1A
+R 00 00 00 09
+T 00 00 1A 72 03 52 03 FB 81
+R 00 00 00 09

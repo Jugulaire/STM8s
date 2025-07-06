@@ -1,0 +1,42 @@
+XH3
+H B areas 5 global symbols
+M eeprom
+O -mstm8
+S .__.ABS. Def000000
+A _CODE size 0 flags 0 addr 0
+A DATA size 0 flags 0 addr 0
+A INITIALIZED size 0 flags 0 addr 0
+A DABS size 0 flags 8 addr 0
+A HOME size 0 flags 0 addr 0
+A GSINIT size 0 flags 0 addr 0
+A GSFINAL size 0 flags 0 addr 0
+A CONST size 0 flags 0 addr 0
+A INITIALIZER size 0 flags 0 addr 0
+A CODE size 22 flags 0 addr 0
+S _eeprom_unlock Def000000
+S _eeprom_wait_busy Def00001C
+S _option_bytes_unlock Def00000E
+S _eeprom_lock Def000017
+A CABS size 0 flags 8 addr 0
+T 00 00 00
+R 00 00 00 09
+T 00 00 00 35 AE 50 64 35 56 50 64
+R 00 00 00 09
+T 00 00 08
+R 00 00 00 09
+T 00 00 08 72 07 50 5F FB 81
+R 00 00 00 09
+T 00 00 0E
+R 00 00 00 09
+T 00 00 0E 72 1E 50 5B 72 1F 50 5C 81
+R 00 00 00 09
+T 00 00 17
+R 00 00 00 09
+T 00 00 17 72 17 50 5F 81
+R 00 00 00 09
+T 00 00 1C
+R 00 00 00 09
+T 00 00 1C
+R 00 00 00 09
+T 00 00 1C 72 05 50 5F FB 81
+R 00 00 00 09

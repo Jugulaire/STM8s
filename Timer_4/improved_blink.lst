@@ -1,0 +1,168 @@
+                                      1 ;--------------------------------------------------------
+                                      2 ; File Created by SDCC : free open source ANSI-C Compiler
+                                      3 ; Version 4.2.0 #13081 (Linux)
+                                      4 ;--------------------------------------------------------
+                                      5 	.module improved_blink
+                                      6 	.optsdcc -mstm8
+                                      7 	
+                                      8 ;--------------------------------------------------------
+                                      9 ; Public variables in this module
+                                     10 ;--------------------------------------------------------
+                                     11 	.globl _main
+                                     12 	.globl _timer_isr
+                                     13 	.globl _tick_counter
+                                     14 ;--------------------------------------------------------
+                                     15 ; ram data
+                                     16 ;--------------------------------------------------------
+                                     17 	.area DATA
+                                     18 ;--------------------------------------------------------
+                                     19 ; ram data
+                                     20 ;--------------------------------------------------------
+                                     21 	.area INITIALIZED
+      000000                         22 _tick_counter::
+      000000                         23 	.ds 2
+                                     24 ;--------------------------------------------------------
+                                     25 ; Stack segment in internal ram
+                                     26 ;--------------------------------------------------------
+                                     27 	.area	SSEG
+      000000                         28 __start__stack:
+      000000                         29 	.ds	1
+                                     30 
+                                     31 ;--------------------------------------------------------
+                                     32 ; absolute external ram data
+                                     33 ;--------------------------------------------------------
+                                     34 	.area DABS (ABS)
+                                     35 
+                                     36 ; default segment ordering for linker
+                                     37 	.area HOME
+                                     38 	.area GSINIT
+                                     39 	.area GSFINAL
+                                     40 	.area CONST
+                                     41 	.area INITIALIZER
+                                     42 	.area CODE
+                                     43 
+                                     44 ;--------------------------------------------------------
+                                     45 ; interrupt vector
+                                     46 ;--------------------------------------------------------
+                                     47 	.area HOME
+      000000                         48 __interrupt_vect:
+      000000 82v00u00u00             49 	int s_GSINIT ; reset
+      000004 82 00 00 00             50 	int 0x000000 ; trap
+      000008 82 00 00 00             51 	int 0x000000 ; int0
+      00000C 82 00 00 00             52 	int 0x000000 ; int1
+      000010 82 00 00 00             53 	int 0x000000 ; int2
+      000014 82 00 00 00             54 	int 0x000000 ; int3
+      000018 82 00 00 00             55 	int 0x000000 ; int4
+      00001C 82 00 00 00             56 	int 0x000000 ; int5
+      000020 82 00 00 00             57 	int 0x000000 ; int6
+      000024 82 00 00 00             58 	int 0x000000 ; int7
+      000028 82 00 00 00             59 	int 0x000000 ; int8
+      00002C 82 00 00 00             60 	int 0x000000 ; int9
+      000030 82 00 00 00             61 	int 0x000000 ; int10
+      000034 82 00 00 00             62 	int 0x000000 ; int11
+      000038 82 00 00 00             63 	int 0x000000 ; int12
+      00003C 82 00 00 00             64 	int 0x000000 ; int13
+      000040 82 00 00 00             65 	int 0x000000 ; int14
+      000044 82 00 00 00             66 	int 0x000000 ; int15
+      000048 82 00 00 00             67 	int 0x000000 ; int16
+      00004C 82 00 00 00             68 	int 0x000000 ; int17
+      000050 82 00 00 00             69 	int 0x000000 ; int18
+      000054 82 00 00 00             70 	int 0x000000 ; int19
+      000058 82 00 00 00             71 	int 0x000000 ; int20
+      00005C 82 00 00 00             72 	int 0x000000 ; int21
+      000060 82 00 00 00             73 	int 0x000000 ; int22
+      000064 82v00u00u00             74 	int _timer_isr ; int23
+                                     75 ;--------------------------------------------------------
+                                     76 ; global & static initialisations
+                                     77 ;--------------------------------------------------------
+                                     78 	.area HOME
+                                     79 	.area GSINIT
+                                     80 	.area GSFINAL
+                                     81 	.area GSINIT
+      000000                         82 __sdcc_init_data:
+                                     83 ; stm8_genXINIT() start
+      000000 AEr00r00         [ 2]   84 	ldw x, #l_DATA
+      000003 27 07            [ 1]   85 	jreq	00002$
+      000005                         86 00001$:
+      000005 72 4FuFFuFF      [ 1]   87 	clr (s_DATA - 1, x)
+      000009 5A               [ 2]   88 	decw x
+      00000A 26 F9            [ 1]   89 	jrne	00001$
+      00000C                         90 00002$:
+      00000C AEr00r00         [ 2]   91 	ldw	x, #l_INITIALIZER
+      00000F 27 09            [ 1]   92 	jreq	00004$
+      000011                         93 00003$:
+      000011 D6uFFuFF         [ 1]   94 	ld	a, (s_INITIALIZER - 1, x)
+      000014 D7uFFuFF         [ 1]   95 	ld	(s_INITIALIZED - 1, x), a
+      000017 5A               [ 2]   96 	decw	x
+      000018 26 F7            [ 1]   97 	jrne	00003$
+      00001A                         98 00004$:
+                                     99 ; stm8_genXINIT() end
+                                    100 	.area GSFINAL
+      000000 CCr00r68         [ 2]  101 	jp	__sdcc_program_startup
+                                    102 ;--------------------------------------------------------
+                                    103 ; Home
+                                    104 ;--------------------------------------------------------
+                                    105 	.area HOME
+                                    106 	.area HOME
+      000068                        107 __sdcc_program_startup:
+      000068 CCr00r1C         [ 2]  108 	jp	_main
+                                    109 ;	return from main will return to caller
+                                    110 ;--------------------------------------------------------
+                                    111 ; code
+                                    112 ;--------------------------------------------------------
+                                    113 	.area CODE
+                                    114 ;	improved_blink.c: 8: void timer_isr() __interrupt(TIM4_ISR) {
+                                    115 ;	-----------------------------------------
+                                    116 ;	 function timer_isr
+                                    117 ;	-----------------------------------------
+      000000                        118 _timer_isr:
+                                    119 ;	improved_blink.c: 9: TIM4_SR &= ~(1 << TIM4_SR_UIF);  // Clear interrupt flag
+      000000 72 11 53 44      [ 1]  120 	bres	0x5344, #0
+                                    121 ;	improved_blink.c: 11: tick_counter++;
+      000004 CEu00u00         [ 2]  122 	ldw	x, _tick_counter+0
+      000007 5C               [ 1]  123 	incw	x
+      000008 CFu00u00         [ 2]  124 	ldw	_tick_counter+0, x
+                                    125 ;	improved_blink.c: 13: if (tick_counter >= 100) {       // 100 * 5ms = 500ms
+      00000B CEu00u00         [ 2]  126 	ldw	x, _tick_counter+0
+      00000E A3 00 64         [ 2]  127 	cpw	x, #0x0064
+      000011 25 08            [ 1]  128 	jrc	00103$
+                                    129 ;	improved_blink.c: 14: PD_ODR ^= (1 << OUTPUT_PIN); // Toggle LED
+      000013 90 16 50 0F      [ 1]  130 	bcpl	0x500f, #3
+                                    131 ;	improved_blink.c: 15: tick_counter = 0;
+      000017 5F               [ 1]  132 	clrw	x
+      000018 CFu00u00         [ 2]  133 	ldw	_tick_counter+0, x
+      00001B                        134 00103$:
+                                    135 ;	improved_blink.c: 17: }
+      00001B 80               [11]  136 	iret
+                                    137 ;	improved_blink.c: 19: void main() {
+                                    138 ;	-----------------------------------------
+                                    139 ;	 function main
+                                    140 ;	-----------------------------------------
+      00001C                        141 _main:
+                                    142 ;	improved_blink.c: 20: CLK_CKDIVR = 0x18;               // Set clock to 2 MHz
+      00001C 35 18 50 C6      [ 1]  143 	mov	0x50c6+0, #0x18
+                                    144 ;	improved_blink.c: 21: enable_interrupts();
+      000020 9A               [ 1]  145 	rim
+                                    146 ;	improved_blink.c: 23: PD_DDR |= (1 << OUTPUT_PIN);     // PD3 output
+      000021 72 16 50 11      [ 1]  147 	bset	0x5011, #3
+                                    148 ;	improved_blink.c: 24: PD_CR1 |= (1 << OUTPUT_PIN);     // Push-pull
+      000025 72 16 50 12      [ 1]  149 	bset	0x5012, #3
+                                    150 ;	improved_blink.c: 26: TIM4_PSCR = 0b00000111;          // Prescaler = 128
+      000029 35 07 53 47      [ 1]  151 	mov	0x5347+0, #0x07
+                                    152 ;	improved_blink.c: 27: TIM4_ARR = 77;                   // (77+1) * 64us ≈ 5ms
+      00002D 35 4D 53 48      [ 1]  153 	mov	0x5348+0, #0x4d
+                                    154 ;	improved_blink.c: 28: TIM4_IER |= (1 << TIM4_IER_UIE); // Enable overflow interrupt
+      000031 72 10 53 43      [ 1]  155 	bset	0x5343, #0
+                                    156 ;	improved_blink.c: 29: TIM4_CR1 |= (1 << TIM4_CR1_CEN); // Start timer
+      000035 72 10 53 40      [ 1]  157 	bset	0x5340, #0
+                                    158 ;	improved_blink.c: 31: while (1) {
+      000039                        159 00102$:
+      000039 20 FE            [ 2]  160 	jra	00102$
+                                    161 ;	improved_blink.c: 34: }
+      00003B 81               [ 4]  162 	ret
+                                    163 	.area CODE
+                                    164 	.area CONST
+                                    165 	.area INITIALIZER
+      000000                        166 __xinit__tick_counter:
+      000000 00 00                  167 	.dw #0x0000
+                                    168 	.area CABS (ABS)

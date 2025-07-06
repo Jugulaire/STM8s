@@ -1,0 +1,167 @@
+                                      1 ;--------------------------------------------------------
+                                      2 ; File Created by SDCC : free open source ANSI-C Compiler
+                                      3 ; Version 4.2.0 #13081 (Linux)
+                                      4 ;--------------------------------------------------------
+                                      5 	.module main
+                                      6 	.optsdcc -mstm8
+                                      7 	
+                                      8 ;--------------------------------------------------------
+                                      9 ; Public variables in this module
+                                     10 ;--------------------------------------------------------
+                                     11 	.globl _main
+                                     12 	.globl _uart_read
+                                     13 	.globl _uart_write
+                                     14 	.globl _uart_init
+                                     15 	.globl _printf
+                                     16 	.globl _putchar
+                                     17 	.globl _getchar
+                                     18 ;--------------------------------------------------------
+                                     19 ; ram data
+                                     20 ;--------------------------------------------------------
+                                     21 	.area DATA
+                                     22 ;--------------------------------------------------------
+                                     23 ; ram data
+                                     24 ;--------------------------------------------------------
+                                     25 	.area INITIALIZED
+                                     26 ;--------------------------------------------------------
+                                     27 ; Stack segment in internal ram
+                                     28 ;--------------------------------------------------------
+                                     29 	.area	SSEG
+      000000                         30 __start__stack:
+      000000                         31 	.ds	1
+                                     32 
+                                     33 ;--------------------------------------------------------
+                                     34 ; absolute external ram data
+                                     35 ;--------------------------------------------------------
+                                     36 	.area DABS (ABS)
+                                     37 
+                                     38 ; default segment ordering for linker
+                                     39 	.area HOME
+                                     40 	.area GSINIT
+                                     41 	.area GSFINAL
+                                     42 	.area CONST
+                                     43 	.area INITIALIZER
+                                     44 	.area CODE
+                                     45 
+                                     46 ;--------------------------------------------------------
+                                     47 ; interrupt vector
+                                     48 ;--------------------------------------------------------
+                                     49 	.area HOME
+      000000                         50 __interrupt_vect:
+      000000 82v00u00u00             51 	int s_GSINIT ; reset
+                                     52 ;--------------------------------------------------------
+                                     53 ; global & static initialisations
+                                     54 ;--------------------------------------------------------
+                                     55 	.area HOME
+                                     56 	.area GSINIT
+                                     57 	.area GSFINAL
+                                     58 	.area GSINIT
+      000000                         59 __sdcc_init_data:
+                                     60 ; stm8_genXINIT() start
+      000000 AEr00r00         [ 2]   61 	ldw x, #l_DATA
+      000003 27 07            [ 1]   62 	jreq	00002$
+      000005                         63 00001$:
+      000005 72 4FuFFuFF      [ 1]   64 	clr (s_DATA - 1, x)
+      000009 5A               [ 2]   65 	decw x
+      00000A 26 F9            [ 1]   66 	jrne	00001$
+      00000C                         67 00002$:
+      00000C AEr00r00         [ 2]   68 	ldw	x, #l_INITIALIZER
+      00000F 27 09            [ 1]   69 	jreq	00004$
+      000011                         70 00003$:
+      000011 D6uFFuFF         [ 1]   71 	ld	a, (s_INITIALIZER - 1, x)
+      000014 D7uFFuFF         [ 1]   72 	ld	(s_INITIALIZED - 1, x), a
+      000017 5A               [ 2]   73 	decw	x
+      000018 26 F7            [ 1]   74 	jrne	00003$
+      00001A                         75 00004$:
+                                     76 ; stm8_genXINIT() end
+                                     77 	.area GSFINAL
+      000000 CCr00r04         [ 2]   78 	jp	__sdcc_program_startup
+                                     79 ;--------------------------------------------------------
+                                     80 ; Home
+                                     81 ;--------------------------------------------------------
+                                     82 	.area HOME
+                                     83 	.area HOME
+      000004                         84 __sdcc_program_startup:
+      000004 CCr00r0C         [ 2]   85 	jp	_main
+                                     86 ;	return from main will return to caller
+                                     87 ;--------------------------------------------------------
+                                     88 ; code
+                                     89 ;--------------------------------------------------------
+                                     90 	.area CODE
+                                     91 ;	main.c: 11: int putchar(int c) {
+                                     92 ;	-----------------------------------------
+                                     93 ;	 function putchar
+                                     94 ;	-----------------------------------------
+      000000                         95 _putchar:
+      000000 9F               [ 1]   96 	ld	a, xl
+                                     97 ;	main.c: 12: uart_write(c);
+      000001 CDr00r00         [ 4]   98 	call	_uart_write
+                                     99 ;	main.c: 13: return 0;
+      000004 5F               [ 1]  100 	clrw	x
+                                    101 ;	main.c: 14: }
+      000005 81               [ 4]  102 	ret
+                                    103 ;	main.c: 19: int getchar() {
+                                    104 ;	-----------------------------------------
+                                    105 ;	 function getchar
+                                    106 ;	-----------------------------------------
+      000006                        107 _getchar:
+                                    108 ;	main.c: 20: return uart_read();
+      000006 CDr00r00         [ 4]  109 	call	_uart_read
+      000009 5F               [ 1]  110 	clrw	x
+      00000A 97               [ 1]  111 	ld	xl, a
+                                    112 ;	main.c: 21: }
+      00000B 81               [ 4]  113 	ret
+                                    114 ;	main.c: 23: void main() {
+                                    115 ;	-----------------------------------------
+                                    116 ;	 function main
+                                    117 ;	-----------------------------------------
+      00000C                        118 _main:
+      00000C 88               [ 1]  119 	push	a
+                                    120 ;	main.c: 24: uint8_t counter = 0;
+      00000D 0F 01            [ 1]  121 	clr	(0x01, sp)
+                                    122 ;	main.c: 25: uart_init();
+      00000F CDr00r00         [ 4]  123 	call	_uart_init
+                                    124 ;	main.c: 27: while (1) {
+      000012                        125 00102$:
+                                    126 ;	main.c: 28: printf("Test, %d\n", counter++);
+      000012 7B 01            [ 1]  127 	ld	a, (0x01, sp)
+      000014 0C 01            [ 1]  128 	inc	(0x01, sp)
+      000016 5F               [ 1]  129 	clrw	x
+      000017 97               [ 1]  130 	ld	xl, a
+      000018 89               [ 2]  131 	pushw	x
+      000019 4Br00            [ 1]  132 	push	#<(___str_0+0)
+      00001B 4Bs00            [ 1]  133 	push	#((___str_0+0) >> 8)
+      00001D CDr00r00         [ 4]  134 	call	_printf
+      000020 5B 04            [ 2]  135 	addw	sp, #4
+                                    136 ;	../../lib/delay.h: 12: for (uint32_t i = 0; i < ((F_CPU / 18 / 1000UL) * ms); i++) {
+      000022 90 5F            [ 1]  137 	clrw	y
+      000024 5F               [ 1]  138 	clrw	x
+      000025                        139 00107$:
+      000025 90 A3 D8 CC      [ 2]  140 	cpw	y, #0xd8cc
+      000029 9F               [ 1]  141 	ld	a, xl
+      00002A A2 00            [ 1]  142 	sbc	a, #0x00
+      00002C 9E               [ 1]  143 	ld	a, xh
+      00002D A2 00            [ 1]  144 	sbc	a, #0x00
+      00002F 24 E1            [ 1]  145 	jrnc	00102$
+                                    146 ;	../../lib/delay.h: 13: __asm__("nop");
+      000031 9D               [ 1]  147 	nop
+                                    148 ;	../../lib/delay.h: 12: for (uint32_t i = 0; i < ((F_CPU / 18 / 1000UL) * ms); i++) {
+      000032 90 5C            [ 1]  149 	incw	y
+      000034 26 EF            [ 1]  150 	jrne	00107$
+      000036 5C               [ 1]  151 	incw	x
+      000037 20 EC            [ 2]  152 	jra	00107$
+                                    153 ;	main.c: 29: delay_ms(500);
+                                    154 ;	main.c: 31: }
+      000039 84               [ 1]  155 	pop	a
+      00003A 81               [ 4]  156 	ret
+                                    157 	.area CODE
+                                    158 	.area CONST
+                                    159 	.area CONST
+      000000                        160 ___str_0:
+      000000 54 65 73 74 2C 20 25   161 	.ascii "Test, %d"
+             64
+      000008 0A                     162 	.db 0x0a
+      000009 00                     163 	.db 0x00
+                                    164 	.area CODE
+                                    165 	.area INITIALIZER
+                                    166 	.area CABS (ABS)
