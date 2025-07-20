@@ -1,0 +1,352 @@
+                                      1 ;--------------------------------------------------------
+                                      2 ; File Created by SDCC : free open source ANSI-C Compiler
+                                      3 ; Version 4.2.0 #13081 (Linux)
+                                      4 ;--------------------------------------------------------
+                                      5 	.module ADC
+                                      6 	.optsdcc -mstm8
+                                      7 	
+                                      8 ;--------------------------------------------------------
+                                      9 ; Public variables in this module
+                                     10 ;--------------------------------------------------------
+                                     11 	.globl _main
+                                     12 	.globl _adc_init
+                                     13 	.globl _adc_read
+                                     14 	.globl _uart_read
+                                     15 	.globl _uart_write
+                                     16 	.globl _uart_config
+                                     17 	.globl _printf
+                                     18 	.globl _putchar
+                                     19 ;--------------------------------------------------------
+                                     20 ; ram data
+                                     21 ;--------------------------------------------------------
+                                     22 	.area DATA
+                                     23 ;--------------------------------------------------------
+                                     24 ; ram data
+                                     25 ;--------------------------------------------------------
+                                     26 	.area INITIALIZED
+                                     27 ;--------------------------------------------------------
+                                     28 ; Stack segment in internal ram
+                                     29 ;--------------------------------------------------------
+                                     30 	.area	SSEG
+      000000                         31 __start__stack:
+      000000                         32 	.ds	1
+                                     33 
+                                     34 ;--------------------------------------------------------
+                                     35 ; absolute external ram data
+                                     36 ;--------------------------------------------------------
+                                     37 	.area DABS (ABS)
+                                     38 
+                                     39 ; default segment ordering for linker
+                                     40 	.area HOME
+                                     41 	.area GSINIT
+                                     42 	.area GSFINAL
+                                     43 	.area CONST
+                                     44 	.area INITIALIZER
+                                     45 	.area CODE
+                                     46 
+                                     47 ;--------------------------------------------------------
+                                     48 ; interrupt vector
+                                     49 ;--------------------------------------------------------
+                                     50 	.area HOME
+      000000                         51 __interrupt_vect:
+      000000 82v00u00u00             52 	int s_GSINIT ; reset
+                                     53 ;--------------------------------------------------------
+                                     54 ; global & static initialisations
+                                     55 ;--------------------------------------------------------
+                                     56 	.area HOME
+                                     57 	.area GSINIT
+                                     58 	.area GSFINAL
+                                     59 	.area GSINIT
+      000000                         60 __sdcc_init_data:
+                                     61 ; stm8_genXINIT() start
+      000000 AEr00r00         [ 2]   62 	ldw x, #l_DATA
+      000003 27 07            [ 1]   63 	jreq	00002$
+      000005                         64 00001$:
+      000005 72 4FuFFuFF      [ 1]   65 	clr (s_DATA - 1, x)
+      000009 5A               [ 2]   66 	decw x
+      00000A 26 F9            [ 1]   67 	jrne	00001$
+      00000C                         68 00002$:
+      00000C AEr00r00         [ 2]   69 	ldw	x, #l_INITIALIZER
+      00000F 27 09            [ 1]   70 	jreq	00004$
+      000011                         71 00003$:
+      000011 D6uFFuFF         [ 1]   72 	ld	a, (s_INITIALIZER - 1, x)
+      000014 D7uFFuFF         [ 1]   73 	ld	(s_INITIALIZED - 1, x), a
+      000017 5A               [ 2]   74 	decw	x
+      000018 26 F7            [ 1]   75 	jrne	00003$
+      00001A                         76 00004$:
+                                     77 ; stm8_genXINIT() end
+                                     78 	.area GSFINAL
+      000000 CCr00r04         [ 2]   79 	jp	__sdcc_program_startup
+                                     80 ;--------------------------------------------------------
+                                     81 ; Home
+                                     82 ;--------------------------------------------------------
+                                     83 	.area HOME
+                                     84 	.area HOME
+      000004                         85 __sdcc_program_startup:
+      000004 CCr00rE1         [ 2]   86 	jp	_main
+                                     87 ;	return from main will return to caller
+                                     88 ;--------------------------------------------------------
+                                     89 ; code
+                                     90 ;--------------------------------------------------------
+                                     91 	.area CODE
+                                     92 ;	ADC.c: 6: void uart_config() {
+                                     93 ;	-----------------------------------------
+                                     94 ;	 function uart_config
+                                     95 ;	-----------------------------------------
+      000000                         96 _uart_config:
+                                     97 ;	ADC.c: 7: CLK_CKDIVR = 0x00; // force 16 mhz 
+      000000 35 00 50 C6      [ 1]   98 	mov	0x50c6+0, #0x00
+                                     99 ;	ADC.c: 15: uint8_t brr1 = (usartdiv >> 4) & 0xFF;               // Bits 11:4
+      000004 A6 68            [ 1]  100 	ld	a, #0x68
+      000006 97               [ 1]  101 	ld	xl, a
+                                    102 ;	ADC.c: 16: uint8_t brr2 = ((usartdiv & 0x0F)) | ((usartdiv >> 8) & 0xF0);  // Bits 3:0 + Bits 11:8
+      000007 A6 83            [ 1]  103 	ld	a, #0x83
+      000009 A4 0F            [ 1]  104 	and	a, #0x0f
+                                    105 ;	ADC.c: 18: UART1_BRR1 = brr1;
+      00000B 90 AE 52 32      [ 2]  106 	ldw	y, #0x5232
+      00000F 88               [ 1]  107 	push	a
+      000010 9F               [ 1]  108 	ld	a, xl
+      000011 90 F7            [ 1]  109 	ld	(y), a
+      000013 84               [ 1]  110 	pop	a
+                                    111 ;	ADC.c: 19: UART1_BRR2 = brr2;
+      000014 C7 52 33         [ 1]  112 	ld	0x5233, a
+                                    113 ;	ADC.c: 20: UART1_CR1 = 0x00;    // 8 data bits, no parity
+      000017 35 00 52 34      [ 1]  114 	mov	0x5234+0, #0x00
+                                    115 ;	ADC.c: 21: UART1_CR3 = 0x00;    // 1 stop bit
+      00001B 35 00 52 36      [ 1]  116 	mov	0x5236+0, #0x00
+                                    117 ;	ADC.c: 22: UART1_CR2 = (1 << UART1_CR2_TEN) | (1 << UART1_CR2_REN); // active RX et TX
+      00001F 35 0C 52 35      [ 1]  118 	mov	0x5235+0, #0x0c
+                                    119 ;	ADC.c: 24: (void)UART1_SR;
+      000023 C6 52 30         [ 1]  120 	ld	a, 0x5230
+                                    121 ;	ADC.c: 25: (void)UART1_DR;
+      000026 C6 52 31         [ 1]  122 	ld	a, 0x5231
+                                    123 ;	ADC.c: 26: }
+      000029 81               [ 4]  124 	ret
+                                    125 ;	ADC.c: 28: void uart_write(uint8_t data) {
+                                    126 ;	-----------------------------------------
+                                    127 ;	 function uart_write
+                                    128 ;	-----------------------------------------
+      00002A                        129 _uart_write:
+                                    130 ;	ADC.c: 29: UART1_DR = data;
+      00002A C7 52 31         [ 1]  131 	ld	0x5231, a
+                                    132 ;	ADC.c: 30: PB_ODR &= ~(1 << 5);  // LED OFF
+      00002D 72 1B 50 05      [ 1]  133 	bres	0x5005, #5
+                                    134 ;	ADC.c: 31: while (!(UART1_SR & (1 << UART1_SR_TC)));
+      000031                        135 00101$:
+      000031 72 0D 52 30 FB   [ 2]  136 	btjf	0x5230, #6, 00101$
+                                    137 ;	ADC.c: 32: PB_ODR |= (1 << 5);   // LED ON
+      000036 72 1A 50 05      [ 1]  138 	bset	0x5005, #5
+                                    139 ;	ADC.c: 33: }
+      00003A 81               [ 4]  140 	ret
+                                    141 ;	ADC.c: 35: uint8_t uart_read() {
+                                    142 ;	-----------------------------------------
+                                    143 ;	 function uart_read
+                                    144 ;	-----------------------------------------
+      00003B                        145 _uart_read:
+                                    146 ;	ADC.c: 36: while (!(UART1_SR & (1 << UART1_SR_RXNE)));
+      00003B                        147 00101$:
+      00003B 72 0B 52 30 FB   [ 2]  148 	btjf	0x5230, #5, 00101$
+                                    149 ;	ADC.c: 37: return UART1_DR;
+      000040 C6 52 31         [ 1]  150 	ld	a, 0x5231
+                                    151 ;	ADC.c: 38: }
+      000043 81               [ 4]  152 	ret
+                                    153 ;	ADC.c: 40: int putchar(int c) {
+                                    154 ;	-----------------------------------------
+                                    155 ;	 function putchar
+                                    156 ;	-----------------------------------------
+      000044                        157 _putchar:
+      000044 9F               [ 1]  158 	ld	a, xl
+                                    159 ;	ADC.c: 41: uart_write(c);
+      000045 CDr00r2A         [ 4]  160 	call	_uart_write
+                                    161 ;	ADC.c: 42: return 0;
+      000048 5F               [ 1]  162 	clrw	x
+                                    163 ;	ADC.c: 43: }
+      000049 81               [ 4]  164 	ret
+                                    165 ;	ADC.c: 45: static inline void delay_ms(uint16_t ms) {
+                                    166 ;	-----------------------------------------
+                                    167 ;	 function delay_ms
+                                    168 ;	-----------------------------------------
+      00004A                        169 _delay_ms:
+      00004A 52 0A            [ 2]  170 	sub	sp, #10
+      00004C 1F 05            [ 2]  171 	ldw	(0x05, sp), x
+                                    172 ;	ADC.c: 47: for (i = 0; i < ((F_CPU / 18000UL) * ms); i++)
+      00004E 5F               [ 1]  173 	clrw	x
+      00004F 1F 09            [ 2]  174 	ldw	(0x09, sp), x
+      000051 1F 07            [ 2]  175 	ldw	(0x07, sp), x
+      000053                        176 00103$:
+      000053 1E 05            [ 2]  177 	ldw	x, (0x05, sp)
+      000055 89               [ 2]  178 	pushw	x
+      000056 AE 03 78         [ 2]  179 	ldw	x, #0x0378
+      000059 CDr00r00         [ 4]  180 	call	___muluint2ulong
+      00005C 5B 02            [ 2]  181 	addw	sp, #2
+      00005E 1F 03            [ 2]  182 	ldw	(0x03, sp), x
+      000060 17 01            [ 2]  183 	ldw	(0x01, sp), y
+      000062 1E 09            [ 2]  184 	ldw	x, (0x09, sp)
+      000064 13 03            [ 2]  185 	cpw	x, (0x03, sp)
+      000066 7B 08            [ 1]  186 	ld	a, (0x08, sp)
+      000068 12 02            [ 1]  187 	sbc	a, (0x02, sp)
+      00006A 7B 07            [ 1]  188 	ld	a, (0x07, sp)
+      00006C 12 01            [ 1]  189 	sbc	a, (0x01, sp)
+      00006E 24 0F            [ 1]  190 	jrnc	00105$
+                                    191 ;	ADC.c: 48: __asm__("nop");
+      000070 9D               [ 1]  192 	nop
+                                    193 ;	ADC.c: 47: for (i = 0; i < ((F_CPU / 18000UL) * ms); i++)
+      000071 1E 09            [ 2]  194 	ldw	x, (0x09, sp)
+      000073 5C               [ 1]  195 	incw	x
+      000074 1F 09            [ 2]  196 	ldw	(0x09, sp), x
+      000076 26 DB            [ 1]  197 	jrne	00103$
+      000078 1E 07            [ 2]  198 	ldw	x, (0x07, sp)
+      00007A 5C               [ 1]  199 	incw	x
+      00007B 1F 07            [ 2]  200 	ldw	(0x07, sp), x
+      00007D 20 D4            [ 2]  201 	jra	00103$
+      00007F                        202 00105$:
+                                    203 ;	ADC.c: 49: }
+      00007F 5B 0A            [ 2]  204 	addw	sp, #10
+      000081 81               [ 4]  205 	ret
+                                    206 ;	ADC.c: 52: uint16_t adc_read(uint8_t channel) {
+                                    207 ;	-----------------------------------------
+                                    208 ;	 function adc_read
+                                    209 ;	-----------------------------------------
+      000082                        210 _adc_read:
+      000082 52 04            [ 2]  211 	sub	sp, #4
+                                    212 ;	ADC.c: 53: if (channel > 7) return 0; // Sanity check
+      000084 97               [ 1]  213 	ld	xl, a
+      000085 A1 07            [ 1]  214 	cp	a, #0x07
+      000087 23 03            [ 2]  215 	jrule	00102$
+      000089 5F               [ 1]  216 	clrw	x
+      00008A 20 2F            [ 2]  217 	jra	00106$
+      00008C                        218 00102$:
+                                    219 ;	ADC.c: 56: ADC1_CSR = (ADC1_CSR & 0xF8) | (channel & 0x07);
+      00008C C6 54 00         [ 1]  220 	ld	a, 0x5400
+      00008F A4 F8            [ 1]  221 	and	a, #0xf8
+      000091 6B 04            [ 1]  222 	ld	(0x04, sp), a
+      000093 9F               [ 1]  223 	ld	a, xl
+      000094 A4 07            [ 1]  224 	and	a, #0x07
+      000096 1A 04            [ 1]  225 	or	a, (0x04, sp)
+      000098 C7 54 00         [ 1]  226 	ld	0x5400, a
+                                    227 ;	ADC.c: 59: ADC1_CR1 |= (1 << ADC1_CR1_ADON);
+      00009B 72 10 54 01      [ 1]  228 	bset	0x5401, #0
+                                    229 ;	ADC.c: 62: while (!(ADC1_CSR & (1 << ADC1_CSR_EOC)));
+      00009F                        230 00103$:
+      00009F C6 54 00         [ 1]  231 	ld	a, 0x5400
+      0000A2 2A FB            [ 1]  232 	jrpl	00103$
+                                    233 ;	ADC.c: 65: uint8_t adcL = ADC1_DRL;
+      0000A4 C6 54 05         [ 1]  234 	ld	a, 0x5405
+      0000A7 97               [ 1]  235 	ld	xl, a
+                                    236 ;	ADC.c: 66: uint8_t adcH = ADC1_DRH;
+      0000A8 C6 54 04         [ 1]  237 	ld	a, 0x5404
+      0000AB 95               [ 1]  238 	ld	xh, a
+                                    239 ;	ADC.c: 69: ADC1_CSR &= ~(1 << ADC1_CSR_EOC);
+      0000AC 72 1F 54 00      [ 1]  240 	bres	0x5400, #7
+                                    241 ;	ADC.c: 71: return ((uint16_t)adcH << 8) | adcL;
+      0000B0 0F 02            [ 1]  242 	clr	(0x02, sp)
+      0000B2 9F               [ 1]  243 	ld	a, xl
+      0000B3 0F 03            [ 1]  244 	clr	(0x03, sp)
+      0000B5 1A 02            [ 1]  245 	or	a, (0x02, sp)
+      0000B7 02               [ 1]  246 	rlwa	x
+      0000B8 1A 03            [ 1]  247 	or	a, (0x03, sp)
+      0000BA 95               [ 1]  248 	ld	xh, a
+      0000BB                        249 00106$:
+                                    250 ;	ADC.c: 72: }
+      0000BB 5B 04            [ 2]  251 	addw	sp, #4
+      0000BD 81               [ 4]  252 	ret
+                                    253 ;	ADC.c: 74: void adc_init(uint8_t channel) {
+                                    254 ;	-----------------------------------------
+                                    255 ;	 function adc_init
+                                    256 ;	-----------------------------------------
+      0000BE                        257 _adc_init:
+      0000BE 88               [ 1]  258 	push	a
+                                    259 ;	ADC.c: 75: if (channel > 7) return; // Sanity check pour STM8S103
+      0000BF 97               [ 1]  260 	ld	xl, a
+      0000C0 A1 07            [ 1]  261 	cp	a, #0x07
+      0000C2 22 1B            [ 1]  262 	jrugt	00103$
+                                    263 ;	ADC.c: 77: CLK_PCKENR2 |= (1 << 3); // Activer horloge ADC1
+      0000C4 72 16 50 CA      [ 1]  264 	bset	0x50ca, #3
+                                    265 ;	ADC.c: 80: ADC1_CSR = (ADC1_CSR & 0xF8) | (channel & 0x07);
+      0000C8 C6 54 00         [ 1]  266 	ld	a, 0x5400
+      0000CB A4 F8            [ 1]  267 	and	a, #0xf8
+      0000CD 6B 01            [ 1]  268 	ld	(0x01, sp), a
+      0000CF 9F               [ 1]  269 	ld	a, xl
+      0000D0 A4 07            [ 1]  270 	and	a, #0x07
+      0000D2 1A 01            [ 1]  271 	or	a, (0x01, sp)
+      0000D4 C7 54 00         [ 1]  272 	ld	0x5400, a
+                                    273 ;	ADC.c: 83: ADC1_CR2 |= (1 << ADC1_CR2_ALIGN);
+      0000D7 72 16 54 02      [ 1]  274 	bset	0x5402, #3
+                                    275 ;	ADC.c: 86: ADC1_CR1 |= (1 << ADC1_CR1_ADON);
+      0000DB 72 10 54 01      [ 1]  276 	bset	0x5401, #0
+      0000DF                        277 00103$:
+                                    278 ;	ADC.c: 87: }
+      0000DF 84               [ 1]  279 	pop	a
+      0000E0 81               [ 4]  280 	ret
+                                    281 ;	ADC.c: 90: void main() {
+                                    282 ;	-----------------------------------------
+                                    283 ;	 function main
+                                    284 ;	-----------------------------------------
+      0000E1                        285 _main:
+      0000E1 52 02            [ 2]  286 	sub	sp, #2
+                                    287 ;	ADC.c: 92: uart_config();   // UART pour debug série
+      0000E3 CDr00r00         [ 4]  288 	call	_uart_config
+                                    289 ;	ADC.c: 93: adc_init(4);      // Initialise ADC sur PD3 (ADC2)
+      0000E6 A6 04            [ 1]  290 	ld	a, #0x04
+      0000E8 CDr00rBE         [ 4]  291 	call	_adc_init
+                                    292 ;	ADC.c: 95: while (1) {
+      0000EB                        293 00102$:
+                                    294 ;	ADC.c: 96: uint16_t value = adc_read(4);  // Lecture
+      0000EB A6 04            [ 1]  295 	ld	a, #0x04
+      0000ED CDr00r82         [ 4]  296 	call	_adc_read
+                                    297 ;	ADC.c: 97: uint16_t millivolts = (value * 5000UL) / 1023;
+      0000F0 1F 01            [ 2]  298 	ldw	(0x01, sp), x
+      0000F2 89               [ 2]  299 	pushw	x
+      0000F3 AE 13 88         [ 2]  300 	ldw	x, #0x1388
+      0000F6 CDr00r00         [ 4]  301 	call	___muluint2ulong
+      0000F9 5B 02            [ 2]  302 	addw	sp, #2
+      0000FB 4B FF            [ 1]  303 	push	#0xff
+      0000FD 4B 03            [ 1]  304 	push	#0x03
+      0000FF 4B 00            [ 1]  305 	push	#0x00
+      000101 4B 00            [ 1]  306 	push	#0x00
+      000103 89               [ 2]  307 	pushw	x
+      000104 90 89            [ 2]  308 	pushw	y
+      000106 CDr00r00         [ 4]  309 	call	__divulong
+      000109 5B 08            [ 2]  310 	addw	sp, #8
+                                    311 ;	ADC.c: 98: printf("ADC:%u,Voltage:%u\r\n", value, millivolts);
+      00010B 89               [ 2]  312 	pushw	x
+      00010C 1E 03            [ 2]  313 	ldw	x, (0x03, sp)
+      00010E 89               [ 2]  314 	pushw	x
+      00010F 4Br00            [ 1]  315 	push	#<(___str_0+0)
+      000111 4Bs00            [ 1]  316 	push	#((___str_0+0) >> 8)
+      000113 CDr00r00         [ 4]  317 	call	_printf
+      000116 5B 06            [ 2]  318 	addw	sp, #6
+                                    319 ;	ADC.c: 47: for (i = 0; i < ((F_CPU / 18000UL) * ms); i++)
+      000118 90 5F            [ 1]  320 	clrw	y
+      00011A 5F               [ 1]  321 	clrw	x
+      00011B                        322 00107$:
+      00011B 90 A3 53 20      [ 2]  323 	cpw	y, #0x5320
+      00011F 9F               [ 1]  324 	ld	a, xl
+      000120 A2 14            [ 1]  325 	sbc	a, #0x14
+      000122 9E               [ 1]  326 	ld	a, xh
+      000123 A2 00            [ 1]  327 	sbc	a, #0x00
+      000125 24 C4            [ 1]  328 	jrnc	00102$
+                                    329 ;	ADC.c: 48: __asm__("nop");
+      000127 9D               [ 1]  330 	nop
+                                    331 ;	ADC.c: 47: for (i = 0; i < ((F_CPU / 18000UL) * ms); i++)
+      000128 90 5C            [ 1]  332 	incw	y
+      00012A 26 EF            [ 1]  333 	jrne	00107$
+      00012C 5C               [ 1]  334 	incw	x
+      00012D 20 EC            [ 2]  335 	jra	00107$
+                                    336 ;	ADC.c: 99: delay_ms(1500); // mini delay
+                                    337 ;	ADC.c: 101: }
+      00012F 5B 02            [ 2]  338 	addw	sp, #2
+      000131 81               [ 4]  339 	ret
+                                    340 	.area CODE
+                                    341 	.area CONST
+                                    342 	.area CONST
+      000000                        343 ___str_0:
+      000000 41 44 43 3A 25 75 2C   344 	.ascii "ADC:%u,Voltage:%u"
+             56 6F 6C 74 61 67 65
+             3A 25 75
+      000011 0D                     345 	.db 0x0d
+      000012 0A                     346 	.db 0x0a
+      000013 00                     347 	.db 0x00
+                                    348 	.area CODE
+                                    349 	.area INITIALIZER
+                                    350 	.area CABS (ABS)
