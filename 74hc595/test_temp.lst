@@ -1,0 +1,1114 @@
+                                      1 ;--------------------------------------------------------
+                                      2 ; File Created by SDCC : free open source ANSI-C Compiler
+                                      3 ; Version 4.2.0 #13081 (Linux)
+                                      4 ;--------------------------------------------------------
+                                      5 	.module test_temp
+                                      6 	.optsdcc -mstm8
+                                      7 	
+                                      8 ;--------------------------------------------------------
+                                      9 ; Public variables in this module
+                                     10 ;--------------------------------------------------------
+                                     11 	.globl _digit_segments
+                                     12 	.globl _main
+                                     13 	.globl _ds18b20_read_raw
+                                     14 	.globl _ds18b20_start_conversion
+                                     15 	.globl _onewire_read_byte
+                                     16 	.globl _onewire_write_byte
+                                     17 	.globl _onewire_read_bit
+                                     18 	.globl _onewire_write_bit
+                                     19 	.globl _onewire_reset
+                                     20 	.globl _display_step
+                                     21 	.globl _display_int
+                                     22 	.globl _display_float
+                                     23 	.globl _setup
+                                     24 	.globl _delay_ms
+                                     25 	.globl _delay_us
+                                     26 	.globl _display_digit
+                                     27 	.globl _disable_all_digits
+                                     28 	.globl _latch
+                                     29 	.globl _shift_out
+                                     30 	.globl _uart_read
+                                     31 	.globl _uart_write
+                                     32 	.globl _uart_config
+                                     33 	.globl _digits
+                                     34 	.globl _putchar
+                                     35 ;--------------------------------------------------------
+                                     36 ; ram data
+                                     37 ;--------------------------------------------------------
+                                     38 	.area DATA
+      000000                         39 _display_step_pos_65536_48:
+      000000                         40 	.ds 1
+                                     41 ;--------------------------------------------------------
+                                     42 ; ram data
+                                     43 ;--------------------------------------------------------
+                                     44 	.area INITIALIZED
+      000000                         45 _digits::
+      000000                         46 	.ds 4
+                                     47 ;--------------------------------------------------------
+                                     48 ; Stack segment in internal ram
+                                     49 ;--------------------------------------------------------
+                                     50 	.area	SSEG
+      000000                         51 __start__stack:
+      000000                         52 	.ds	1
+                                     53 
+                                     54 ;--------------------------------------------------------
+                                     55 ; absolute external ram data
+                                     56 ;--------------------------------------------------------
+                                     57 	.area DABS (ABS)
+                                     58 
+                                     59 ; default segment ordering for linker
+                                     60 	.area HOME
+                                     61 	.area GSINIT
+                                     62 	.area GSFINAL
+                                     63 	.area CONST
+                                     64 	.area INITIALIZER
+                                     65 	.area CODE
+                                     66 
+                                     67 ;--------------------------------------------------------
+                                     68 ; interrupt vector
+                                     69 ;--------------------------------------------------------
+                                     70 	.area HOME
+      000000                         71 __interrupt_vect:
+      000000 82v00u00u00             72 	int s_GSINIT ; reset
+                                     73 ;--------------------------------------------------------
+                                     74 ; global & static initialisations
+                                     75 ;--------------------------------------------------------
+                                     76 	.area HOME
+                                     77 	.area GSINIT
+                                     78 	.area GSFINAL
+                                     79 	.area GSINIT
+      000000                         80 __sdcc_init_data:
+                                     81 ; stm8_genXINIT() start
+      000000 AEr00r00         [ 2]   82 	ldw x, #l_DATA
+      000003 27 07            [ 1]   83 	jreq	00002$
+      000005                         84 00001$:
+      000005 72 4FuFFuFF      [ 1]   85 	clr (s_DATA - 1, x)
+      000009 5A               [ 2]   86 	decw x
+      00000A 26 F9            [ 1]   87 	jrne	00001$
+      00000C                         88 00002$:
+      00000C AEr00r00         [ 2]   89 	ldw	x, #l_INITIALIZER
+      00000F 27 09            [ 1]   90 	jreq	00004$
+      000011                         91 00003$:
+      000011 D6uFFuFF         [ 1]   92 	ld	a, (s_INITIALIZER - 1, x)
+      000014 D7uFFuFF         [ 1]   93 	ld	(s_INITIALIZED - 1, x), a
+      000017 5A               [ 2]   94 	decw	x
+      000018 26 F7            [ 1]   95 	jrne	00003$
+      00001A                         96 00004$:
+                                     97 ; stm8_genXINIT() end
+                                     98 ;	test_temp.c: 235: static uint8_t pos = 0;
+      00001A 72 5Fu00u00      [ 1]   99 	clr	_display_step_pos_65536_48+0
+                                    100 	.area GSFINAL
+      000000 CCr00r04         [ 2]  101 	jp	__sdcc_program_startup
+                                    102 ;--------------------------------------------------------
+                                    103 ; Home
+                                    104 ;--------------------------------------------------------
+                                    105 	.area HOME
+                                    106 	.area HOME
+      000004                        107 __sdcc_program_startup:
+      000004 CCr04rA2         [ 2]  108 	jp	_main
+                                    109 ;	return from main will return to caller
+                                    110 ;--------------------------------------------------------
+                                    111 ; code
+                                    112 ;--------------------------------------------------------
+                                    113 	.area CODE
+                                    114 ;	test_temp.c: 27: void uart_config() {
+                                    115 ;	-----------------------------------------
+                                    116 ;	 function uart_config
+                                    117 ;	-----------------------------------------
+      000000                        118 _uart_config:
+                                    119 ;	test_temp.c: 28: CLK_CKDIVR = 0x00; // Horloge non divisée (reste à 16 MHz)
+      000000 35 00 50 C6      [ 1]  120 	mov	0x50c6+0, #0x00
+                                    121 ;	test_temp.c: 33: uint8_t brr1 = (usartdiv >> 4) & 0xFF;
+      000004 A6 68            [ 1]  122 	ld	a, #0x68
+      000006 97               [ 1]  123 	ld	xl, a
+                                    124 ;	test_temp.c: 34: uint8_t brr2 = ((usartdiv & 0x0F)) | ((usartdiv >> 8) & 0xF0);
+      000007 A6 83            [ 1]  125 	ld	a, #0x83
+      000009 A4 0F            [ 1]  126 	and	a, #0x0f
+                                    127 ;	test_temp.c: 36: UART1_BRR1 = brr1;
+      00000B 90 AE 52 32      [ 2]  128 	ldw	y, #0x5232
+      00000F 88               [ 1]  129 	push	a
+      000010 9F               [ 1]  130 	ld	a, xl
+      000011 90 F7            [ 1]  131 	ld	(y), a
+      000013 84               [ 1]  132 	pop	a
+                                    133 ;	test_temp.c: 37: UART1_BRR2 = brr2;
+      000014 C7 52 33         [ 1]  134 	ld	0x5233, a
+                                    135 ;	test_temp.c: 39: UART1_CR1 = 0x00; // Pas de parité, 8 bits de données
+      000017 35 00 52 34      [ 1]  136 	mov	0x5234+0, #0x00
+                                    137 ;	test_temp.c: 40: UART1_CR3 = 0x00; // 1 bit de stop
+      00001B 35 00 52 36      [ 1]  138 	mov	0x5236+0, #0x00
+                                    139 ;	test_temp.c: 41: UART1_CR2 = (1 << UART1_CR2_TEN) | (1 << UART1_CR2_REN); // Active TX et RX
+      00001F 35 0C 52 35      [ 1]  140 	mov	0x5235+0, #0x0c
+                                    141 ;	test_temp.c: 44: (void)UART1_SR;
+      000023 C6 52 30         [ 1]  142 	ld	a, 0x5230
+                                    143 ;	test_temp.c: 45: (void)UART1_DR;
+      000026 C6 52 31         [ 1]  144 	ld	a, 0x5231
+                                    145 ;	test_temp.c: 46: }
+      000029 81               [ 4]  146 	ret
+                                    147 ;	test_temp.c: 49: void uart_write(uint8_t data) {
+                                    148 ;	-----------------------------------------
+                                    149 ;	 function uart_write
+                                    150 ;	-----------------------------------------
+      00002A                        151 _uart_write:
+                                    152 ;	test_temp.c: 50: UART1_DR = data;                    // Envoie l'octet
+      00002A C7 52 31         [ 1]  153 	ld	0x5231, a
+                                    154 ;	test_temp.c: 51: PB_ODR &= ~(1 << 5);                // Éteint une LED (facultatif pour debug)
+      00002D 72 1B 50 05      [ 1]  155 	bres	0x5005, #5
+                                    156 ;	test_temp.c: 52: while (!(UART1_SR & (1 << UART1_SR_TC))); // Attente que la transmission soit terminée
+      000031                        157 00101$:
+      000031 72 0D 52 30 FB   [ 2]  158 	btjf	0x5230, #6, 00101$
+                                    159 ;	test_temp.c: 53: PB_ODR |= (1 << 5);                 // Allume la LED (facultatif)
+      000036 72 1A 50 05      [ 1]  160 	bset	0x5005, #5
+                                    161 ;	test_temp.c: 54: }
+      00003A 81               [ 4]  162 	ret
+                                    163 ;	test_temp.c: 57: uint8_t uart_read() {
+                                    164 ;	-----------------------------------------
+                                    165 ;	 function uart_read
+                                    166 ;	-----------------------------------------
+      00003B                        167 _uart_read:
+                                    168 ;	test_temp.c: 58: while (!(UART1_SR & (1 << UART1_SR_RXNE))); // Attente réception
+      00003B                        169 00101$:
+      00003B 72 0B 52 30 FB   [ 2]  170 	btjf	0x5230, #5, 00101$
+                                    171 ;	test_temp.c: 59: return UART1_DR;
+      000040 C6 52 31         [ 1]  172 	ld	a, 0x5231
+                                    173 ;	test_temp.c: 60: }
+      000043 81               [ 4]  174 	ret
+                                    175 ;	test_temp.c: 63: int putchar(int c) {
+                                    176 ;	-----------------------------------------
+                                    177 ;	 function putchar
+                                    178 ;	-----------------------------------------
+      000044                        179 _putchar:
+      000044 9F               [ 1]  180 	ld	a, xl
+                                    181 ;	test_temp.c: 64: uart_write(c);
+      000045 CDr00r2A         [ 4]  182 	call	_uart_write
+                                    183 ;	test_temp.c: 65: return 0;
+      000048 5F               [ 1]  184 	clrw	x
+                                    185 ;	test_temp.c: 66: }
+      000049 81               [ 4]  186 	ret
+                                    187 ;	test_temp.c: 84: void shift_out(uint8_t val) {
+                                    188 ;	-----------------------------------------
+                                    189 ;	 function shift_out
+                                    190 ;	-----------------------------------------
+      00004A                        191 _shift_out:
+      00004A 88               [ 1]  192 	push	a
+      00004B 95               [ 1]  193 	ld	xh, a
+                                    194 ;	test_temp.c: 85: for (uint8_t i = 0; i < 8; i++) {
+      00004C 0F 01            [ 1]  195 	clr	(0x01, sp)
+      00004E                        196 00106$:
+      00004E 7B 01            [ 1]  197 	ld	a, (0x01, sp)
+      000050 A1 08            [ 1]  198 	cp	a, #0x08
+      000052 24 21            [ 1]  199 	jrnc	00108$
+                                    200 ;	test_temp.c: 86: if (val & 0x80) PC_ODR |= (1 << 3);   // DATA HIGH
+      000054 C6 50 0A         [ 1]  201 	ld	a, 0x500a
+      000057 5D               [ 2]  202 	tnzw	x
+      000058 2A 07            [ 1]  203 	jrpl	00102$
+      00005A AA 08            [ 1]  204 	or	a, #0x08
+      00005C C7 50 0A         [ 1]  205 	ld	0x500a, a
+      00005F 20 05            [ 2]  206 	jra	00103$
+      000061                        207 00102$:
+                                    208 ;	test_temp.c: 87: else            PC_ODR &= ~(1 << 3);  // DATA LOW
+      000061 A4 F7            [ 1]  209 	and	a, #0xf7
+      000063 C7 50 0A         [ 1]  210 	ld	0x500a, a
+      000066                        211 00103$:
+                                    212 ;	test_temp.c: 89: PC_ODR |= (1 << 4);  // CLOCK HIGH
+      000066 72 18 50 0A      [ 1]  213 	bset	0x500a, #4
+                                    214 ;	test_temp.c: 90: PC_ODR &= ~(1 << 4); // CLOCK LOW
+      00006A 72 19 50 0A      [ 1]  215 	bres	0x500a, #4
+                                    216 ;	test_temp.c: 92: val <<= 1;
+      00006E 9E               [ 1]  217 	ld	a, xh
+      00006F 48               [ 1]  218 	sll	a
+      000070 95               [ 1]  219 	ld	xh, a
+                                    220 ;	test_temp.c: 85: for (uint8_t i = 0; i < 8; i++) {
+      000071 0C 01            [ 1]  221 	inc	(0x01, sp)
+      000073 20 D9            [ 2]  222 	jra	00106$
+      000075                        223 00108$:
+                                    224 ;	test_temp.c: 94: }
+      000075 84               [ 1]  225 	pop	a
+      000076 81               [ 4]  226 	ret
+                                    227 ;	test_temp.c: 96: void latch() {
+                                    228 ;	-----------------------------------------
+                                    229 ;	 function latch
+                                    230 ;	-----------------------------------------
+      000077                        231 _latch:
+                                    232 ;	test_temp.c: 97: PC_ODR |= (1 << 5);  // LATCH HIGH
+      000077 72 1A 50 0A      [ 1]  233 	bset	0x500a, #5
+                                    234 ;	test_temp.c: 98: PC_ODR &= ~(1 << 5); // LATCH LOW
+      00007B 72 1B 50 0A      [ 1]  235 	bres	0x500a, #5
+                                    236 ;	test_temp.c: 99: }
+      00007F 81               [ 4]  237 	ret
+                                    238 ;	test_temp.c: 102: void disable_all_digits() {
+                                    239 ;	-----------------------------------------
+                                    240 ;	 function disable_all_digits
+                                    241 ;	-----------------------------------------
+      000080                        242 _disable_all_digits:
+                                    243 ;	test_temp.c: 104: PA_ODR |= (1 << 1); // D3
+      000080 72 12 50 00      [ 1]  244 	bset	0x5000, #1
+                                    245 ;	test_temp.c: 105: PA_ODR |= (1 << 2); // D1
+      000084 72 14 50 00      [ 1]  246 	bset	0x5000, #2
+                                    247 ;	test_temp.c: 106: PA_ODR |= (1 << 3); // D4
+      000088 72 16 50 00      [ 1]  248 	bset	0x5000, #3
+                                    249 ;	test_temp.c: 107: PD_ODR |= (1 << 4); // D2
+      00008C 72 18 50 0F      [ 1]  250 	bset	0x500f, #4
+                                    251 ;	test_temp.c: 108: }
+      000090 81               [ 4]  252 	ret
+                                    253 ;	test_temp.c: 110: void display_digit(uint8_t value, uint8_t pos) {
+                                    254 ;	-----------------------------------------
+                                    255 ;	 function display_digit
+                                    256 ;	-----------------------------------------
+      000091                        257 _display_digit:
+      000091 97               [ 1]  258 	ld	xl, a
+                                    259 ;	test_temp.c: 112: PA_ODR |= (1 << 1); // D3
+      000092 72 12 50 00      [ 1]  260 	bset	0x5000, #1
+                                    261 ;	test_temp.c: 113: PA_ODR |= (1 << 2); // D1
+      000096 72 14 50 00      [ 1]  262 	bset	0x5000, #2
+                                    263 ;	test_temp.c: 114: PA_ODR |= (1 << 3); // D4
+      00009A 72 16 50 00      [ 1]  264 	bset	0x5000, #3
+                                    265 ;	test_temp.c: 115: PD_ODR |= (1 << 4); // D2
+      00009E 72 18 50 0F      [ 1]  266 	bset	0x500f, #4
+                                    267 ;	test_temp.c: 118: shift_out(digit_segments[value]);
+      0000A2 4F               [ 1]  268 	clr	a
+      0000A3 95               [ 1]  269 	ld	xh, a
+      0000A4 D6u00u00         [ 1]  270 	ld	a, (_digit_segments+0, x)
+      0000A7 CDr00r4A         [ 4]  271 	call	_shift_out
+                                    272 ;	test_temp.c: 119: latch();
+      0000AA CDr00r77         [ 4]  273 	call	_latch
+                                    274 ;	test_temp.c: 123: switch (pos) {
+      0000AD 7B 03            [ 1]  275 	ld	a, (0x03, sp)
+      0000AF A1 00            [ 1]  276 	cp	a, #0x00
+      0000B1 27 13            [ 1]  277 	jreq	00101$
+      0000B3 7B 03            [ 1]  278 	ld	a, (0x03, sp)
+      0000B5 4A               [ 1]  279 	dec	a
+      0000B6 27 18            [ 1]  280 	jreq	00102$
+      0000B8 7B 03            [ 1]  281 	ld	a, (0x03, sp)
+      0000BA A1 02            [ 1]  282 	cp	a, #0x02
+      0000BC 27 1C            [ 1]  283 	jreq	00103$
+      0000BE 7B 03            [ 1]  284 	ld	a, (0x03, sp)
+      0000C0 A1 03            [ 1]  285 	cp	a, #0x03
+      0000C2 27 20            [ 1]  286 	jreq	00104$
+      0000C4 20 26            [ 2]  287 	jra	00106$
+                                    288 ;	test_temp.c: 124: case 0: PA_ODR &= ~(1 << 3); break; // D4 → gauche
+      0000C6                        289 00101$:
+      0000C6 C6 50 00         [ 1]  290 	ld	a, 0x5000
+      0000C9 A4 F7            [ 1]  291 	and	a, #0xf7
+      0000CB C7 50 00         [ 1]  292 	ld	0x5000, a
+      0000CE 20 1C            [ 2]  293 	jra	00106$
+                                    294 ;	test_temp.c: 125: case 1: PA_ODR &= ~(1 << 1); break; // D3
+      0000D0                        295 00102$:
+      0000D0 C6 50 00         [ 1]  296 	ld	a, 0x5000
+      0000D3 A4 FD            [ 1]  297 	and	a, #0xfd
+      0000D5 C7 50 00         [ 1]  298 	ld	0x5000, a
+      0000D8 20 12            [ 2]  299 	jra	00106$
+                                    300 ;	test_temp.c: 126: case 2: PD_ODR &= ~(1 << 4); break; // D2
+      0000DA                        301 00103$:
+      0000DA C6 50 0F         [ 1]  302 	ld	a, 0x500f
+      0000DD A4 EF            [ 1]  303 	and	a, #0xef
+      0000DF C7 50 0F         [ 1]  304 	ld	0x500f, a
+      0000E2 20 08            [ 2]  305 	jra	00106$
+                                    306 ;	test_temp.c: 127: case 3: PA_ODR &= ~(1 << 2); break; // D1 → droite
+      0000E4                        307 00104$:
+      0000E4 C6 50 00         [ 1]  308 	ld	a, 0x5000
+      0000E7 A4 FB            [ 1]  309 	and	a, #0xfb
+      0000E9 C7 50 00         [ 1]  310 	ld	0x5000, a
+                                    311 ;	test_temp.c: 128: }
+      0000EC                        312 00106$:
+                                    313 ;	test_temp.c: 130: }
+      0000EC 85               [ 2]  314 	popw	x
+      0000ED 84               [ 1]  315 	pop	a
+      0000EE FC               [ 2]  316 	jp	(x)
+                                    317 ;	test_temp.c: 132: void delay_us(uint16_t us) {
+                                    318 ;	-----------------------------------------
+                                    319 ;	 function delay_us
+                                    320 ;	-----------------------------------------
+      0000EF                        321 _delay_us:
+                                    322 ;	test_temp.c: 133: while(us--) {
+      0000EF                        323 00101$:
+      0000EF 90 93            [ 1]  324 	ldw	y, x
+      0000F1 5A               [ 2]  325 	decw	x
+      0000F2 90 5D            [ 2]  326 	tnzw	y
+      0000F4 26 01            [ 1]  327 	jrne	00117$
+      0000F6 81               [ 4]  328 	ret
+      0000F7                        329 00117$:
+                                    330 ;	test_temp.c: 134: __asm__("nop"); __asm__("nop"); __asm__("nop");
+      0000F7 9D               [ 1]  331 	nop
+      0000F8 9D               [ 1]  332 	nop
+      0000F9 9D               [ 1]  333 	nop
+                                    334 ;	test_temp.c: 135: __asm__("nop"); __asm__("nop"); __asm__("nop");
+      0000FA 9D               [ 1]  335 	nop
+      0000FB 9D               [ 1]  336 	nop
+      0000FC 9D               [ 1]  337 	nop
+      0000FD 20 F0            [ 2]  338 	jra	00101$
+                                    339 ;	test_temp.c: 137: }
+      0000FF 81               [ 4]  340 	ret
+                                    341 ;	test_temp.c: 140: void delay_ms(uint16_t ms) {
+                                    342 ;	-----------------------------------------
+                                    343 ;	 function delay_ms
+                                    344 ;	-----------------------------------------
+      000100                        345 _delay_ms:
+      000100 52 04            [ 2]  346 	sub	sp, #4
+      000102 1F 03            [ 2]  347 	ldw	(0x03, sp), x
+                                    348 ;	test_temp.c: 141: for (uint16_t i = 0; i < ms; i++) {
+      000104 5F               [ 1]  349 	clrw	x
+      000105                        350 00107$:
+      000105 13 03            [ 2]  351 	cpw	x, (0x03, sp)
+      000107 24 18            [ 1]  352 	jrnc	00109$
+                                    353 ;	test_temp.c: 142: for (volatile uint16_t j = 0; j < 1000; j++)
+      000109 0F 02            [ 1]  354 	clr	(0x02, sp)
+      00010B 0F 01            [ 1]  355 	clr	(0x01, sp)
+      00010D                        356 00104$:
+      00010D 16 01            [ 2]  357 	ldw	y, (0x01, sp)
+      00010F 90 A3 03 E8      [ 2]  358 	cpw	y, #0x03e8
+      000113 24 09            [ 1]  359 	jrnc	00108$
+                                    360 ;	test_temp.c: 143: __asm__("nop");
+      000115 9D               [ 1]  361 	nop
+                                    362 ;	test_temp.c: 142: for (volatile uint16_t j = 0; j < 1000; j++)
+      000116 16 01            [ 2]  363 	ldw	y, (0x01, sp)
+      000118 90 5C            [ 1]  364 	incw	y
+      00011A 17 01            [ 2]  365 	ldw	(0x01, sp), y
+      00011C 20 EF            [ 2]  366 	jra	00104$
+      00011E                        367 00108$:
+                                    368 ;	test_temp.c: 141: for (uint16_t i = 0; i < ms; i++) {
+      00011E 5C               [ 1]  369 	incw	x
+      00011F 20 E4            [ 2]  370 	jra	00107$
+      000121                        371 00109$:
+                                    372 ;	test_temp.c: 145: }
+      000121 5B 04            [ 2]  373 	addw	sp, #4
+      000123 81               [ 4]  374 	ret
+                                    375 ;	test_temp.c: 148: void setup() {
+                                    376 ;	-----------------------------------------
+                                    377 ;	 function setup
+                                    378 ;	-----------------------------------------
+      000124                        379 _setup:
+                                    380 ;	test_temp.c: 150: PC_DDR |= (1 << 3) | (1 << 4) | (1 << 5);
+      000124 C6 50 0C         [ 1]  381 	ld	a, 0x500c
+      000127 AA 38            [ 1]  382 	or	a, #0x38
+      000129 C7 50 0C         [ 1]  383 	ld	0x500c, a
+                                    384 ;	test_temp.c: 151: PC_CR1 |= (1 << 3) | (1 << 4) | (1 << 5);
+      00012C C6 50 0D         [ 1]  385 	ld	a, 0x500d
+      00012F AA 38            [ 1]  386 	or	a, #0x38
+      000131 C7 50 0D         [ 1]  387 	ld	0x500d, a
+                                    388 ;	test_temp.c: 154: PA_DDR |= (1 << 1) | (1 << 2) | (1 << 3);
+      000134 C6 50 02         [ 1]  389 	ld	a, 0x5002
+      000137 AA 0E            [ 1]  390 	or	a, #0x0e
+      000139 C7 50 02         [ 1]  391 	ld	0x5002, a
+                                    392 ;	test_temp.c: 155: PA_CR1 |= (1 << 1) | (1 << 2) | (1 << 3);
+      00013C C6 50 03         [ 1]  393 	ld	a, 0x5003
+      00013F AA 0E            [ 1]  394 	or	a, #0x0e
+      000141 C7 50 03         [ 1]  395 	ld	0x5003, a
+                                    396 ;	test_temp.c: 158: PD_DDR |= (1 << 4);
+      000144 72 18 50 11      [ 1]  397 	bset	0x5011, #4
+                                    398 ;	test_temp.c: 159: PD_CR1 |= (1 << 4);
+      000148 72 18 50 12      [ 1]  399 	bset	0x5012, #4
+                                    400 ;	test_temp.c: 160: }
+      00014C 81               [ 4]  401 	ret
+                                    402 ;	test_temp.c: 162: void display_float(float value) {
+                                    403 ;	-----------------------------------------
+                                    404 ;	 function display_float
+                                    405 ;	-----------------------------------------
+      00014D                        406 _display_float:
+      00014D 52 06            [ 2]  407 	sub	sp, #6
+                                    408 ;	test_temp.c: 163: if (value < 0 || value >= 100) return; // Ne supporte que 00.00 à 99.99
+      00014F 5F               [ 1]  409 	clrw	x
+      000150 89               [ 2]  410 	pushw	x
+      000151 5F               [ 1]  411 	clrw	x
+      000152 89               [ 2]  412 	pushw	x
+      000153 1E 0F            [ 2]  413 	ldw	x, (0x0f, sp)
+      000155 89               [ 2]  414 	pushw	x
+      000156 1E 0F            [ 2]  415 	ldw	x, (0x0f, sp)
+      000158 89               [ 2]  416 	pushw	x
+      000159 CDr00r00         [ 4]  417 	call	___fslt
+      00015C 6B 06            [ 1]  418 	ld	(0x06, sp), a
+      00015E 27 03            [ 1]  419 	jreq	00167$
+      000160 CCr02r5C         [ 2]  420 	jp	00119$
+      000163                        421 00167$:
+      000163 5F               [ 1]  422 	clrw	x
+      000164 89               [ 2]  423 	pushw	x
+      000165 4B C8            [ 1]  424 	push	#0xc8
+      000167 4B 42            [ 1]  425 	push	#0x42
+      000169 1E 0F            [ 2]  426 	ldw	x, (0x0f, sp)
+      00016B 89               [ 2]  427 	pushw	x
+      00016C 1E 0F            [ 2]  428 	ldw	x, (0x0f, sp)
+      00016E 89               [ 2]  429 	pushw	x
+      00016F CDr00r00         [ 4]  430 	call	___fslt
+      000172 4D               [ 1]  431 	tnz	a
+      000173 26 03            [ 1]  432 	jrne	00102$
+      000175 CCr02r5C         [ 2]  433 	jp	00119$
+      000178                        434 00102$:
+                                    435 ;	test_temp.c: 165: uint16_t scaled = (uint16_t)(value * 100); // Ex: 34.56 → 3456
+      000178 1E 0B            [ 2]  436 	ldw	x, (0x0b, sp)
+      00017A 89               [ 2]  437 	pushw	x
+      00017B 1E 0B            [ 2]  438 	ldw	x, (0x0b, sp)
+      00017D 89               [ 2]  439 	pushw	x
+      00017E 5F               [ 1]  440 	clrw	x
+      00017F 89               [ 2]  441 	pushw	x
+      000180 4B C8            [ 1]  442 	push	#0xc8
+      000182 4B 42            [ 1]  443 	push	#0x42
+      000184 CDr00r00         [ 4]  444 	call	___fsmul
+      000187 89               [ 2]  445 	pushw	x
+      000188 90 89            [ 2]  446 	pushw	y
+      00018A CDr00r00         [ 4]  447 	call	___fs2uint
+                                    448 ;	test_temp.c: 168: digits[0] = (scaled / 1000) % 10;
+      00018D 1F 05            [ 2]  449 	ldw	(0x05, sp), x
+      00018F 90 AE 03 E8      [ 2]  450 	ldw	y, #0x03e8
+      000193 65               [ 2]  451 	divw	x, y
+      000194 90 AE 00 0A      [ 2]  452 	ldw	y, #0x000a
+      000198 65               [ 2]  453 	divw	x, y
+      000199 90 9F            [ 1]  454 	ld	a, yl
+      00019B 6B 01            [ 1]  455 	ld	(0x01, sp), a
+                                    456 ;	test_temp.c: 169: digits[1] = (scaled / 100) % 10;
+      00019D 1E 05            [ 2]  457 	ldw	x, (0x05, sp)
+      00019F 90 AE 00 64      [ 2]  458 	ldw	y, #0x0064
+      0001A3 65               [ 2]  459 	divw	x, y
+      0001A4 90 AE 00 0A      [ 2]  460 	ldw	y, #0x000a
+      0001A8 65               [ 2]  461 	divw	x, y
+      0001A9 90 9F            [ 1]  462 	ld	a, yl
+      0001AB 6B 02            [ 1]  463 	ld	(0x02, sp), a
+                                    464 ;	test_temp.c: 170: digits[2] = (scaled / 10) % 10;
+      0001AD 1E 05            [ 2]  465 	ldw	x, (0x05, sp)
+      0001AF 90 AE 00 0A      [ 2]  466 	ldw	y, #0x000a
+      0001B3 65               [ 2]  467 	divw	x, y
+      0001B4 90 AE 00 0A      [ 2]  468 	ldw	y, #0x000a
+      0001B8 65               [ 2]  469 	divw	x, y
+      0001B9 90 9F            [ 1]  470 	ld	a, yl
+      0001BB 6B 03            [ 1]  471 	ld	(0x03, sp), a
+                                    472 ;	test_temp.c: 171: digits[3] = scaled % 10;
+      0001BD 1E 05            [ 2]  473 	ldw	x, (0x05, sp)
+      0001BF 90 AE 00 0A      [ 2]  474 	ldw	y, #0x000a
+      0001C3 65               [ 2]  475 	divw	x, y
+      0001C4 90 9F            [ 1]  476 	ld	a, yl
+      0001C6 6B 04            [ 1]  477 	ld	(0x04, sp), a
+                                    478 ;	test_temp.c: 173: for (uint8_t i = 0; i < 4; i++) {
+      0001C8 0F 06            [ 1]  479 	clr	(0x06, sp)
+      0001CA                        480 00117$:
+      0001CA 7B 06            [ 1]  481 	ld	a, (0x06, sp)
+      0001CC A1 04            [ 1]  482 	cp	a, #0x04
+      0001CE 25 03            [ 1]  483 	jrc	00169$
+      0001D0 CCr02r5C         [ 2]  484 	jp	00119$
+      0001D3                        485 00169$:
+                                    486 ;	test_temp.c: 174: uint8_t seg = digit_segments[digits[i]];
+      0001D3 5F               [ 1]  487 	clrw	x
+      0001D4 7B 06            [ 1]  488 	ld	a, (0x06, sp)
+      0001D6 97               [ 1]  489 	ld	xl, a
+      0001D7 89               [ 2]  490 	pushw	x
+      0001D8 96               [ 1]  491 	ldw	x, sp
+      0001D9 1C 00 03         [ 2]  492 	addw	x, #3
+      0001DC 72 FB 01         [ 2]  493 	addw	x, (1, sp)
+      0001DF 5B 02            [ 2]  494 	addw	sp, #2
+      0001E1 F6               [ 1]  495 	ld	a, (x)
+      0001E2 5F               [ 1]  496 	clrw	x
+      0001E3 97               [ 1]  497 	ld	xl, a
+      0001E4 1Cr00r00         [ 2]  498 	addw	x, #(_digit_segments+0)
+      0001E7 F6               [ 1]  499 	ld	a, (x)
+                                    500 ;	test_temp.c: 177: if (i == 1) seg |= 0x80;
+      0001E8 88               [ 1]  501 	push	a
+      0001E9 7B 07            [ 1]  502 	ld	a, (0x07, sp)
+      0001EB 4A               [ 1]  503 	dec	a
+      0001EC 84               [ 1]  504 	pop	a
+      0001ED 26 07            [ 1]  505 	jrne	00171$
+      0001EF 88               [ 1]  506 	push	a
+      0001F0 A6 01            [ 1]  507 	ld	a, #0x01
+      0001F2 6B 06            [ 1]  508 	ld	(0x06, sp), a
+      0001F4 84               [ 1]  509 	pop	a
+      0001F5 C5                     510 	.byte 0xc5
+      0001F6                        511 00171$:
+      0001F6 0F 05            [ 1]  512 	clr	(0x05, sp)
+      0001F8                        513 00172$:
+      0001F8 0D 05            [ 1]  514 	tnz	(0x05, sp)
+      0001FA 27 02            [ 1]  515 	jreq	00105$
+      0001FC AA 80            [ 1]  516 	or	a, #0x80
+      0001FE                        517 00105$:
+                                    518 ;	test_temp.c: 179: disable_all_digits();
+      0001FE 88               [ 1]  519 	push	a
+      0001FF CDr00r80         [ 4]  520 	call	_disable_all_digits
+      000202 84               [ 1]  521 	pop	a
+                                    522 ;	test_temp.c: 180: shift_out(seg);
+      000203 CDr00r4A         [ 4]  523 	call	_shift_out
+                                    524 ;	test_temp.c: 181: latch();
+      000206 CDr00r77         [ 4]  525 	call	_latch
+                                    526 ;	test_temp.c: 184: switch (i) {
+      000209 7B 06            [ 1]  527 	ld	a, (0x06, sp)
+      00020B A0 03            [ 1]  528 	sub	a, #0x03
+      00020D 26 04            [ 1]  529 	jrne	00175$
+      00020F 4C               [ 1]  530 	inc	a
+      000210 97               [ 1]  531 	ld	xl, a
+      000211 20 02            [ 2]  532 	jra	00176$
+      000213                        533 00175$:
+      000213 4F               [ 1]  534 	clr	a
+      000214 97               [ 1]  535 	ld	xl, a
+      000215                        536 00176$:
+      000215 7B 06            [ 1]  537 	ld	a, (0x06, sp)
+      000217 A1 00            [ 1]  538 	cp	a, #0x00
+      000219 27 10            [ 1]  539 	jreq	00106$
+      00021B 0D 05            [ 1]  540 	tnz	(0x05, sp)
+      00021D 26 12            [ 1]  541 	jrne	00107$
+      00021F 7B 06            [ 1]  542 	ld	a, (0x06, sp)
+      000221 A1 02            [ 1]  543 	cp	a, #0x02
+      000223 27 12            [ 1]  544 	jreq	00108$
+      000225 9F               [ 1]  545 	ld	a, xl
+      000226 4D               [ 1]  546 	tnz	a
+      000227 26 14            [ 1]  547 	jrne	00109$
+      000229 20 16            [ 2]  548 	jra	00110$
+                                    549 ;	test_temp.c: 185: case 0: PA_ODR &= ~(1 << 3); break; // D4 (pos 0)
+      00022B                        550 00106$:
+      00022B 72 17 50 00      [ 1]  551 	bres	0x5000, #3
+      00022F 20 10            [ 2]  552 	jra	00110$
+                                    553 ;	test_temp.c: 186: case 1: PA_ODR &= ~(1 << 1); break; // D3
+      000231                        554 00107$:
+      000231 72 13 50 00      [ 1]  555 	bres	0x5000, #1
+      000235 20 0A            [ 2]  556 	jra	00110$
+                                    557 ;	test_temp.c: 187: case 2: PD_ODR &= ~(1 << 4); break; // D2
+      000237                        558 00108$:
+      000237 72 19 50 0F      [ 1]  559 	bres	0x500f, #4
+      00023B 20 04            [ 2]  560 	jra	00110$
+                                    561 ;	test_temp.c: 188: case 3: PA_ODR &= ~(1 << 2); break; // D1
+      00023D                        562 00109$:
+      00023D 72 15 50 00      [ 1]  563 	bres	0x5000, #2
+                                    564 ;	test_temp.c: 189: }
+      000241                        565 00110$:
+                                    566 ;	test_temp.c: 192: if (i == 1 || i == 3) delay_us(800); // digits 0 et 1 = 1ms
+      000241 0D 05            [ 1]  567 	tnz	(0x05, sp)
+      000243 26 04            [ 1]  568 	jrne	00111$
+      000245 9F               [ 1]  569 	ld	a, xl
+      000246 4D               [ 1]  570 	tnz	a
+      000247 27 08            [ 1]  571 	jreq	00112$
+      000249                        572 00111$:
+      000249 AE 03 20         [ 2]  573 	ldw	x, #0x0320
+      00024C CDr00rEF         [ 4]  574 	call	_delay_us
+      00024F 20 06            [ 2]  575 	jra	00118$
+      000251                        576 00112$:
+                                    577 ;	test_temp.c: 193: else                  delay_us(400);  // autres = 0.7ms 
+      000251 AE 01 90         [ 2]  578 	ldw	x, #0x0190
+      000254 CDr00rEF         [ 4]  579 	call	_delay_us
+      000257                        580 00118$:
+                                    581 ;	test_temp.c: 173: for (uint8_t i = 0; i < 4; i++) {
+      000257 0C 06            [ 1]  582 	inc	(0x06, sp)
+      000259 CCr01rCA         [ 2]  583 	jp	00117$
+      00025C                        584 00119$:
+                                    585 ;	test_temp.c: 196: }
+      00025C 1E 07            [ 2]  586 	ldw	x, (7, sp)
+      00025E 5B 0C            [ 2]  587 	addw	sp, #12
+      000260 FC               [ 2]  588 	jp	(x)
+                                    589 ;	test_temp.c: 198: void display_int(uint16_t temp_x100) {
+                                    590 ;	-----------------------------------------
+                                    591 ;	 function display_int
+                                    592 ;	-----------------------------------------
+      000261                        593 _display_int:
+      000261 52 08            [ 2]  594 	sub	sp, #8
+                                    595 ;	test_temp.c: 200: if (temp_x100 > 9999) temp_x100 = 9999;
+      000263 90 93            [ 1]  596 	ldw	y, x
+      000265 90 A3 27 0F      [ 2]  597 	cpw	y, #0x270f
+      000269 23 03            [ 2]  598 	jrule	00102$
+      00026B AE 27 0F         [ 2]  599 	ldw	x, #0x270f
+      00026E                        600 00102$:
+                                    601 ;	test_temp.c: 203: uint8_t d0 = (temp_x100 / 1000) % 10;
+      00026E 1F 01            [ 2]  602 	ldw	(0x01, sp), x
+      000270 90 AE 03 E8      [ 2]  603 	ldw	y, #0x03e8
+      000274 65               [ 2]  604 	divw	x, y
+      000275 90 AE 00 0A      [ 2]  605 	ldw	y, #0x000a
+      000279 65               [ 2]  606 	divw	x, y
+      00027A 90 9F            [ 1]  607 	ld	a, yl
+                                    608 ;	test_temp.c: 204: uint8_t d1 = (temp_x100 / 100) % 10;
+      00027C 1E 01            [ 2]  609 	ldw	x, (0x01, sp)
+      00027E 90 AE 00 64      [ 2]  610 	ldw	y, #0x0064
+      000282 65               [ 2]  611 	divw	x, y
+      000283 90 AE 00 0A      [ 2]  612 	ldw	y, #0x000a
+      000287 65               [ 2]  613 	divw	x, y
+      000288 61               [ 1]  614 	exg	a, yl
+      000289 6B 08            [ 1]  615 	ld	(0x08, sp), a
+      00028B 61               [ 1]  616 	exg	a, yl
+                                    617 ;	test_temp.c: 205: uint8_t d2 = (temp_x100 / 10) % 10;
+      00028C 1E 01            [ 2]  618 	ldw	x, (0x01, sp)
+      00028E 90 AE 00 0A      [ 2]  619 	ldw	y, #0x000a
+      000292 65               [ 2]  620 	divw	x, y
+      000293 90 AE 00 0A      [ 2]  621 	ldw	y, #0x000a
+      000297 65               [ 2]  622 	divw	x, y
+      000298 93               [ 1]  623 	ldw	x, y
+                                    624 ;	test_temp.c: 206: uint8_t d3 = temp_x100 % 10;
+      000299 89               [ 2]  625 	pushw	x
+      00029A 1E 03            [ 2]  626 	ldw	x, (0x03, sp)
+      00029C 90 AE 00 0A      [ 2]  627 	ldw	y, #0x000a
+      0002A0 65               [ 2]  628 	divw	x, y
+      0002A1 85               [ 2]  629 	popw	x
+                                    630 ;	test_temp.c: 208: uint8_t digits[4] = { d0, d1, d2, d3 };
+      0002A2 6B 03            [ 1]  631 	ld	(0x03, sp), a
+      0002A4 7B 08            [ 1]  632 	ld	a, (0x08, sp)
+      0002A6 6B 04            [ 1]  633 	ld	(0x04, sp), a
+      0002A8 41               [ 1]  634 	exg	a, xl
+      0002A9 6B 05            [ 1]  635 	ld	(0x05, sp), a
+      0002AB 41               [ 1]  636 	exg	a, xl
+      0002AC 61               [ 1]  637 	exg	a, yl
+      0002AD 6B 06            [ 1]  638 	ld	(0x06, sp), a
+      0002AF 61               [ 1]  639 	exg	a, yl
+                                    640 ;	test_temp.c: 210: for (uint8_t i = 0; i < 4; i++) {
+      0002B0 0F 08            [ 1]  641 	clr	(0x08, sp)
+      0002B2                        642 00116$:
+      0002B2 7B 08            [ 1]  643 	ld	a, (0x08, sp)
+      0002B4 A1 04            [ 1]  644 	cp	a, #0x04
+      0002B6 25 03            [ 1]  645 	jrc	00167$
+      0002B8 CCr03r44         [ 2]  646 	jp	00118$
+      0002BB                        647 00167$:
+                                    648 ;	test_temp.c: 211: uint8_t seg = digit_segments[digits[i]];
+      0002BB 5F               [ 1]  649 	clrw	x
+      0002BC 7B 08            [ 1]  650 	ld	a, (0x08, sp)
+      0002BE 97               [ 1]  651 	ld	xl, a
+      0002BF 89               [ 2]  652 	pushw	x
+      0002C0 96               [ 1]  653 	ldw	x, sp
+      0002C1 1C 00 05         [ 2]  654 	addw	x, #5
+      0002C4 72 FB 01         [ 2]  655 	addw	x, (1, sp)
+      0002C7 5B 02            [ 2]  656 	addw	sp, #2
+      0002C9 F6               [ 1]  657 	ld	a, (x)
+      0002CA 5F               [ 1]  658 	clrw	x
+      0002CB 97               [ 1]  659 	ld	xl, a
+      0002CC 1Cr00r00         [ 2]  660 	addw	x, #(_digit_segments+0)
+      0002CF F6               [ 1]  661 	ld	a, (x)
+                                    662 ;	test_temp.c: 214: if (i == 1) seg |= 0x80;
+      0002D0 88               [ 1]  663 	push	a
+      0002D1 7B 09            [ 1]  664 	ld	a, (0x09, sp)
+      0002D3 4A               [ 1]  665 	dec	a
+      0002D4 84               [ 1]  666 	pop	a
+      0002D5 26 07            [ 1]  667 	jrne	00169$
+      0002D7 88               [ 1]  668 	push	a
+      0002D8 A6 01            [ 1]  669 	ld	a, #0x01
+      0002DA 6B 08            [ 1]  670 	ld	(0x08, sp), a
+      0002DC 84               [ 1]  671 	pop	a
+      0002DD C5                     672 	.byte 0xc5
+      0002DE                        673 00169$:
+      0002DE 0F 07            [ 1]  674 	clr	(0x07, sp)
+      0002E0                        675 00170$:
+      0002E0 0D 07            [ 1]  676 	tnz	(0x07, sp)
+      0002E2 27 02            [ 1]  677 	jreq	00104$
+      0002E4 AA 80            [ 1]  678 	or	a, #0x80
+      0002E6                        679 00104$:
+                                    680 ;	test_temp.c: 216: disable_all_digits();
+      0002E6 88               [ 1]  681 	push	a
+      0002E7 CDr00r80         [ 4]  682 	call	_disable_all_digits
+      0002EA 84               [ 1]  683 	pop	a
+                                    684 ;	test_temp.c: 217: shift_out(seg);
+      0002EB CDr00r4A         [ 4]  685 	call	_shift_out
+                                    686 ;	test_temp.c: 218: latch();
+      0002EE CDr00r77         [ 4]  687 	call	_latch
+                                    688 ;	test_temp.c: 221: switch (i) {
+      0002F1 7B 08            [ 1]  689 	ld	a, (0x08, sp)
+      0002F3 A0 03            [ 1]  690 	sub	a, #0x03
+      0002F5 26 04            [ 1]  691 	jrne	00173$
+      0002F7 4C               [ 1]  692 	inc	a
+      0002F8 97               [ 1]  693 	ld	xl, a
+      0002F9 20 02            [ 2]  694 	jra	00174$
+      0002FB                        695 00173$:
+      0002FB 4F               [ 1]  696 	clr	a
+      0002FC 97               [ 1]  697 	ld	xl, a
+      0002FD                        698 00174$:
+      0002FD 7B 08            [ 1]  699 	ld	a, (0x08, sp)
+      0002FF A1 00            [ 1]  700 	cp	a, #0x00
+      000301 27 10            [ 1]  701 	jreq	00105$
+      000303 0D 07            [ 1]  702 	tnz	(0x07, sp)
+      000305 26 12            [ 1]  703 	jrne	00106$
+      000307 7B 08            [ 1]  704 	ld	a, (0x08, sp)
+      000309 A1 02            [ 1]  705 	cp	a, #0x02
+      00030B 27 12            [ 1]  706 	jreq	00107$
+      00030D 9F               [ 1]  707 	ld	a, xl
+      00030E 4D               [ 1]  708 	tnz	a
+      00030F 26 14            [ 1]  709 	jrne	00108$
+      000311 20 16            [ 2]  710 	jra	00109$
+                                    711 ;	test_temp.c: 222: case 0: PA_ODR &= ~(1 << 3); break; // D4
+      000313                        712 00105$:
+      000313 72 17 50 00      [ 1]  713 	bres	0x5000, #3
+      000317 20 10            [ 2]  714 	jra	00109$
+                                    715 ;	test_temp.c: 223: case 1: PA_ODR &= ~(1 << 1); break; // D3
+      000319                        716 00106$:
+      000319 72 13 50 00      [ 1]  717 	bres	0x5000, #1
+      00031D 20 0A            [ 2]  718 	jra	00109$
+                                    719 ;	test_temp.c: 224: case 2: PD_ODR &= ~(1 << 4); break; // D2
+      00031F                        720 00107$:
+      00031F 72 19 50 0F      [ 1]  721 	bres	0x500f, #4
+      000323 20 04            [ 2]  722 	jra	00109$
+                                    723 ;	test_temp.c: 225: case 3: PA_ODR &= ~(1 << 2); break; // D1
+      000325                        724 00108$:
+      000325 72 15 50 00      [ 1]  725 	bres	0x5000, #2
+                                    726 ;	test_temp.c: 226: }
+      000329                        727 00109$:
+                                    728 ;	test_temp.c: 229: if (i == 1 || i == 3) delay_us(800);
+      000329 0D 07            [ 1]  729 	tnz	(0x07, sp)
+      00032B 26 04            [ 1]  730 	jrne	00110$
+      00032D 9F               [ 1]  731 	ld	a, xl
+      00032E 4D               [ 1]  732 	tnz	a
+      00032F 27 08            [ 1]  733 	jreq	00111$
+      000331                        734 00110$:
+      000331 AE 03 20         [ 2]  735 	ldw	x, #0x0320
+      000334 CDr00rEF         [ 4]  736 	call	_delay_us
+      000337 20 06            [ 2]  737 	jra	00117$
+      000339                        738 00111$:
+                                    739 ;	test_temp.c: 230: else                  delay_us(400);
+      000339 AE 01 90         [ 2]  740 	ldw	x, #0x0190
+      00033C CDr00rEF         [ 4]  741 	call	_delay_us
+      00033F                        742 00117$:
+                                    743 ;	test_temp.c: 210: for (uint8_t i = 0; i < 4; i++) {
+      00033F 0C 08            [ 1]  744 	inc	(0x08, sp)
+      000341 CCr02rB2         [ 2]  745 	jp	00116$
+      000344                        746 00118$:
+                                    747 ;	test_temp.c: 232: }
+      000344 5B 08            [ 2]  748 	addw	sp, #8
+      000346 81               [ 4]  749 	ret
+                                    750 ;	test_temp.c: 234: void display_step() {
+                                    751 ;	-----------------------------------------
+                                    752 ;	 function display_step
+                                    753 ;	-----------------------------------------
+      000347                        754 _display_step:
+                                    755 ;	test_temp.c: 237: disable_all_digits();
+      000347 CDr00r80         [ 4]  756 	call	_disable_all_digits
+                                    757 ;	test_temp.c: 239: uint8_t seg = digit_segments[digits[pos]];
+      00034A 5F               [ 1]  758 	clrw	x
+      00034B C6u00u00         [ 1]  759 	ld	a, _display_step_pos_65536_48+0
+      00034E 97               [ 1]  760 	ld	xl, a
+      00034F D6u00u00         [ 1]  761 	ld	a, (_digits+0, x)
+      000352 5F               [ 1]  762 	clrw	x
+      000353 97               [ 1]  763 	ld	xl, a
+      000354 D6u00u00         [ 1]  764 	ld	a, (_digit_segments+0, x)
+                                    765 ;	test_temp.c: 242: if (pos == 1) seg |= 0x80;
+      000357 88               [ 1]  766 	push	a
+      000358 C6u00u00         [ 1]  767 	ld	a, _display_step_pos_65536_48+0
+      00035B 4A               [ 1]  768 	dec	a
+      00035C 84               [ 1]  769 	pop	a
+      00035D 26 02            [ 1]  770 	jrne	00102$
+      00035F AA 80            [ 1]  771 	or	a, #0x80
+      000361                        772 00102$:
+                                    773 ;	test_temp.c: 244: shift_out(seg);
+      000361 CDr00r4A         [ 4]  774 	call	_shift_out
+                                    775 ;	test_temp.c: 245: latch();
+      000364 CDr00r77         [ 4]  776 	call	_latch
+                                    777 ;	test_temp.c: 248: switch (pos) {
+      000367 C6u00u00         [ 1]  778 	ld	a, _display_step_pos_65536_48+0
+      00036A A1 00            [ 1]  779 	cp	a, #0x00
+      00036C 27 16            [ 1]  780 	jreq	00103$
+      00036E C6u00u00         [ 1]  781 	ld	a, _display_step_pos_65536_48+0
+      000371 4A               [ 1]  782 	dec	a
+      000372 27 16            [ 1]  783 	jreq	00104$
+      000374 C6u00u00         [ 1]  784 	ld	a, _display_step_pos_65536_48+0
+      000377 A1 02            [ 1]  785 	cp	a, #0x02
+      000379 27 15            [ 1]  786 	jreq	00105$
+      00037B C6u00u00         [ 1]  787 	ld	a, _display_step_pos_65536_48+0
+      00037E A1 03            [ 1]  788 	cp	a, #0x03
+      000380 27 14            [ 1]  789 	jreq	00106$
+      000382 20 16            [ 2]  790 	jra	00107$
+                                    791 ;	test_temp.c: 249: case 0: PA_ODR &= ~(1 << 3); break; // D4
+      000384                        792 00103$:
+      000384 72 17 50 00      [ 1]  793 	bres	0x5000, #3
+      000388 20 10            [ 2]  794 	jra	00107$
+                                    795 ;	test_temp.c: 250: case 1: PA_ODR &= ~(1 << 1); break; // D3
+      00038A                        796 00104$:
+      00038A 72 13 50 00      [ 1]  797 	bres	0x5000, #1
+      00038E 20 0A            [ 2]  798 	jra	00107$
+                                    799 ;	test_temp.c: 251: case 2: PD_ODR &= ~(1 << 4); break; // D2
+      000390                        800 00105$:
+      000390 72 19 50 0F      [ 1]  801 	bres	0x500f, #4
+      000394 20 04            [ 2]  802 	jra	00107$
+                                    803 ;	test_temp.c: 252: case 3: PA_ODR &= ~(1 << 2); break; // D1
+      000396                        804 00106$:
+      000396 72 15 50 00      [ 1]  805 	bres	0x5000, #2
+                                    806 ;	test_temp.c: 253: }
+      00039A                        807 00107$:
+                                    808 ;	test_temp.c: 255: pos = (pos + 1) % 4; // Passe au digit suivant à chaque appel
+      00039A C6u00u00         [ 1]  809 	ld	a, _display_step_pos_65536_48+0
+      00039D 5F               [ 1]  810 	clrw	x
+      00039E 97               [ 1]  811 	ld	xl, a
+      00039F 5C               [ 1]  812 	incw	x
+      0003A0 4B 04            [ 1]  813 	push	#0x04
+      0003A2 4B 00            [ 1]  814 	push	#0x00
+      0003A4 CDr00r00         [ 4]  815 	call	__modsint
+      0003A7 9F               [ 1]  816 	ld	a, xl
+      0003A8 C7u00u00         [ 1]  817 	ld	_display_step_pos_65536_48+0, a
+                                    818 ;	test_temp.c: 256: }
+      0003AB 81               [ 4]  819 	ret
+                                    820 ;	test_temp.c: 262: uint8_t onewire_reset(void) {
+                                    821 ;	-----------------------------------------
+                                    822 ;	 function onewire_reset
+                                    823 ;	-----------------------------------------
+      0003AC                        824 _onewire_reset:
+                                    825 ;	test_temp.c: 263: DS_OUTPUT(); DS_LOW();         // Force la ligne à 0 pendant 480µs
+      0003AC 72 16 50 11      [ 1]  826 	bset	0x5011, #3
+      0003B0 72 17 50 0F      [ 1]  827 	bres	0x500f, #3
+                                    828 ;	test_temp.c: 264: delay_us(480);
+      0003B4 AE 01 E0         [ 2]  829 	ldw	x, #0x01e0
+      0003B7 CDr00rEF         [ 4]  830 	call	_delay_us
+                                    831 ;	test_temp.c: 265: DS_INPUT();                    // Relâche la ligne
+      0003BA 72 17 50 11      [ 1]  832 	bres	0x5011, #3
+                                    833 ;	test_temp.c: 266: delay_us(70);                  // Attend la réponse du capteur
+      0003BE AE 00 46         [ 2]  834 	ldw	x, #0x0046
+      0003C1 CDr00rEF         [ 4]  835 	call	_delay_us
+                                    836 ;	test_temp.c: 267: uint8_t presence = !DS_READ(); // 0 = présence détectée
+      0003C4 C6 50 10         [ 1]  837 	ld	a, 0x5010
+      0003C7 4E               [ 1]  838 	swap	a
+      0003C8 48               [ 1]  839 	sll	a
+      0003C9 4F               [ 1]  840 	clr	a
+      0003CA 49               [ 1]  841 	rlc	a
+      0003CB A0 01            [ 1]  842 	sub	a, #0x01
+      0003CD 4F               [ 1]  843 	clr	a
+      0003CE 49               [ 1]  844 	rlc	a
+                                    845 ;	test_temp.c: 268: delay_us(410);                 // Fin du timing 1-Wire
+      0003CF 88               [ 1]  846 	push	a
+      0003D0 AE 01 9A         [ 2]  847 	ldw	x, #0x019a
+      0003D3 CDr00rEF         [ 4]  848 	call	_delay_us
+      0003D6 84               [ 1]  849 	pop	a
+                                    850 ;	test_temp.c: 269: return presence;
+                                    851 ;	test_temp.c: 270: }
+      0003D7 81               [ 4]  852 	ret
+                                    853 ;	test_temp.c: 273: void onewire_write_bit(uint8_t bit) {
+                                    854 ;	-----------------------------------------
+                                    855 ;	 function onewire_write_bit
+                                    856 ;	-----------------------------------------
+      0003D8                        857 _onewire_write_bit:
+      0003D8 88               [ 1]  858 	push	a
+      0003D9 6B 01            [ 1]  859 	ld	(0x01, sp), a
+                                    860 ;	test_temp.c: 274: DS_OUTPUT(); DS_LOW();
+      0003DB 72 16 50 11      [ 1]  861 	bset	0x5011, #3
+      0003DF 72 17 50 0F      [ 1]  862 	bres	0x500f, #3
+                                    863 ;	test_temp.c: 275: delay_us(bit ? 6 : 60);        // Bit 1 = pulse court, bit 0 = pulse long
+      0003E3 0D 01            [ 1]  864 	tnz	(0x01, sp)
+      0003E5 27 04            [ 1]  865 	jreq	00103$
+      0003E7 AE 00 06         [ 2]  866 	ldw	x, #0x0006
+      0003EA BC                     867 	.byte 0xbc
+      0003EB                        868 00103$:
+      0003EB AE 00 3C         [ 2]  869 	ldw	x, #0x003c
+      0003EE                        870 00104$:
+      0003EE CDr00rEF         [ 4]  871 	call	_delay_us
+                                    872 ;	test_temp.c: 276: DS_INPUT();                    // Libère la ligne
+      0003F1 72 17 50 11      [ 1]  873 	bres	0x5011, #3
+                                    874 ;	test_temp.c: 277: delay_us(bit ? 64 : 10);       // Attente avant prochain bit
+      0003F5 0D 01            [ 1]  875 	tnz	(0x01, sp)
+      0003F7 27 05            [ 1]  876 	jreq	00105$
+      0003F9 AE 00 40         [ 2]  877 	ldw	x, #0x0040
+      0003FC 20 03            [ 2]  878 	jra	00106$
+      0003FE                        879 00105$:
+      0003FE AE 00 0A         [ 2]  880 	ldw	x, #0x000a
+      000401                        881 00106$:
+      000401 84               [ 1]  882 	pop	a
+      000402 CCr00rEF         [ 2]  883 	jp	_delay_us
+                                    884 ;	test_temp.c: 278: }
+      000405 84               [ 1]  885 	pop	a
+      000406 81               [ 4]  886 	ret
+                                    887 ;	test_temp.c: 281: uint8_t onewire_read_bit(void) {
+                                    888 ;	-----------------------------------------
+                                    889 ;	 function onewire_read_bit
+                                    890 ;	-----------------------------------------
+      000407                        891 _onewire_read_bit:
+                                    892 ;	test_temp.c: 283: DS_OUTPUT(); DS_LOW();
+      000407 72 16 50 11      [ 1]  893 	bset	0x5011, #3
+      00040B 72 17 50 0F      [ 1]  894 	bres	0x500f, #3
+                                    895 ;	test_temp.c: 284: delay_us(6);                   // Pulse d'initiation de lecture
+      00040F AE 00 06         [ 2]  896 	ldw	x, #0x0006
+      000412 CDr00rEF         [ 4]  897 	call	_delay_us
+                                    898 ;	test_temp.c: 285: DS_INPUT();                    // Libère la ligne pour lire
+      000415 72 17 50 11      [ 1]  899 	bres	0x5011, #3
+                                    900 ;	test_temp.c: 286: delay_us(9);                   // Délai standard
+      000419 AE 00 09         [ 2]  901 	ldw	x, #0x0009
+      00041C CDr00rEF         [ 4]  902 	call	_delay_us
+                                    903 ;	test_temp.c: 287: bit = (DS_READ() ? 1 : 0);     // Lecture du bit
+      00041F 72 07 50 10 03   [ 2]  904 	btjf	0x5010, #3, 00103$
+      000424 5F               [ 1]  905 	clrw	x
+      000425 5C               [ 1]  906 	incw	x
+      000426 21                     907 	.byte 0x21
+      000427                        908 00103$:
+      000427 5F               [ 1]  909 	clrw	x
+      000428                        910 00104$:
+      000428 9F               [ 1]  911 	ld	a, xl
+                                    912 ;	test_temp.c: 288: delay_us(55);                  // Fin du slot
+      000429 88               [ 1]  913 	push	a
+      00042A AE 00 37         [ 2]  914 	ldw	x, #0x0037
+      00042D CDr00rEF         [ 4]  915 	call	_delay_us
+      000430 84               [ 1]  916 	pop	a
+                                    917 ;	test_temp.c: 289: return bit;
+                                    918 ;	test_temp.c: 290: }
+      000431 81               [ 4]  919 	ret
+                                    920 ;	test_temp.c: 293: void onewire_write_byte(uint8_t byte) {
+                                    921 ;	-----------------------------------------
+                                    922 ;	 function onewire_write_byte
+                                    923 ;	-----------------------------------------
+      000432                        924 _onewire_write_byte:
+      000432 52 02            [ 2]  925 	sub	sp, #2
+      000434 6B 01            [ 1]  926 	ld	(0x01, sp), a
+                                    927 ;	test_temp.c: 294: for (uint8_t i = 0; i < 8; i++) {
+      000436 0F 02            [ 1]  928 	clr	(0x02, sp)
+      000438                        929 00103$:
+      000438 7B 02            [ 1]  930 	ld	a, (0x02, sp)
+      00043A A1 08            [ 1]  931 	cp	a, #0x08
+      00043C 24 0D            [ 1]  932 	jrnc	00105$
+                                    933 ;	test_temp.c: 295: onewire_write_bit(byte & 0x01); // Envoie le bit LSB
+      00043E 7B 01            [ 1]  934 	ld	a, (0x01, sp)
+      000440 A4 01            [ 1]  935 	and	a, #0x01
+      000442 CDr03rD8         [ 4]  936 	call	_onewire_write_bit
+                                    937 ;	test_temp.c: 296: byte >>= 1;
+      000445 04 01            [ 1]  938 	srl	(0x01, sp)
+                                    939 ;	test_temp.c: 294: for (uint8_t i = 0; i < 8; i++) {
+      000447 0C 02            [ 1]  940 	inc	(0x02, sp)
+      000449 20 ED            [ 2]  941 	jra	00103$
+      00044B                        942 00105$:
+                                    943 ;	test_temp.c: 298: }
+      00044B 5B 02            [ 2]  944 	addw	sp, #2
+      00044D 81               [ 4]  945 	ret
+                                    946 ;	test_temp.c: 301: uint8_t onewire_read_byte(void) {
+                                    947 ;	-----------------------------------------
+                                    948 ;	 function onewire_read_byte
+                                    949 ;	-----------------------------------------
+      00044E                        950 _onewire_read_byte:
+      00044E 52 02            [ 2]  951 	sub	sp, #2
+                                    952 ;	test_temp.c: 302: uint8_t byte = 0;
+      000450 0F 01            [ 1]  953 	clr	(0x01, sp)
+                                    954 ;	test_temp.c: 303: for (uint8_t i = 0; i < 8; i++) {
+      000452 0F 02            [ 1]  955 	clr	(0x02, sp)
+      000454                        956 00105$:
+      000454 7B 02            [ 1]  957 	ld	a, (0x02, sp)
+      000456 A1 08            [ 1]  958 	cp	a, #0x08
+      000458 24 11            [ 1]  959 	jrnc	00103$
+                                    960 ;	test_temp.c: 304: byte >>= 1;
+      00045A 04 01            [ 1]  961 	srl	(0x01, sp)
+                                    962 ;	test_temp.c: 305: if (onewire_read_bit()) byte |= 0x80; // Lit MSB en premier
+      00045C CDr04r07         [ 4]  963 	call	_onewire_read_bit
+      00045F 4D               [ 1]  964 	tnz	a
+      000460 27 05            [ 1]  965 	jreq	00106$
+      000462 08 01            [ 1]  966 	sll	(0x01, sp)
+      000464 99               [ 1]  967 	scf
+      000465 06 01            [ 1]  968 	rrc	(0x01, sp)
+      000467                        969 00106$:
+                                    970 ;	test_temp.c: 303: for (uint8_t i = 0; i < 8; i++) {
+      000467 0C 02            [ 1]  971 	inc	(0x02, sp)
+      000469 20 E9            [ 2]  972 	jra	00105$
+      00046B                        973 00103$:
+                                    974 ;	test_temp.c: 307: return byte;
+      00046B 7B 01            [ 1]  975 	ld	a, (0x01, sp)
+                                    976 ;	test_temp.c: 308: }
+      00046D 5B 02            [ 2]  977 	addw	sp, #2
+      00046F 81               [ 4]  978 	ret
+                                    979 ;	test_temp.c: 311: void ds18b20_start_conversion(void) {
+                                    980 ;	-----------------------------------------
+                                    981 ;	 function ds18b20_start_conversion
+                                    982 ;	-----------------------------------------
+      000470                        983 _ds18b20_start_conversion:
+                                    984 ;	test_temp.c: 312: onewire_reset();
+      000470 CDr03rAC         [ 4]  985 	call	_onewire_reset
+                                    986 ;	test_temp.c: 313: onewire_write_byte(0xCC); // Skip ROM (capteur unique sur le bus)
+      000473 A6 CC            [ 1]  987 	ld	a, #0xcc
+      000475 CDr04r32         [ 4]  988 	call	_onewire_write_byte
+                                    989 ;	test_temp.c: 314: onewire_write_byte(0x44); // Convert T (lance mesure)
+      000478 A6 44            [ 1]  990 	ld	a, #0x44
+                                    991 ;	test_temp.c: 315: }
+      00047A CCr04r32         [ 2]  992 	jp	_onewire_write_byte
+                                    993 ;	test_temp.c: 318: int16_t ds18b20_read_raw(void) {
+                                    994 ;	-----------------------------------------
+                                    995 ;	 function ds18b20_read_raw
+                                    996 ;	-----------------------------------------
+      00047D                        997 _ds18b20_read_raw:
+      00047D 52 04            [ 2]  998 	sub	sp, #4
+                                    999 ;	test_temp.c: 319: onewire_reset();
+      00047F CDr03rAC         [ 4] 1000 	call	_onewire_reset
+                                   1001 ;	test_temp.c: 320: onewire_write_byte(0xCC); // Skip ROM
+      000482 A6 CC            [ 1] 1002 	ld	a, #0xcc
+      000484 CDr04r32         [ 4] 1003 	call	_onewire_write_byte
+                                   1004 ;	test_temp.c: 321: onewire_write_byte(0xBE); // Read Scratchpad
+      000487 A6 BE            [ 1] 1005 	ld	a, #0xbe
+      000489 CDr04r32         [ 4] 1006 	call	_onewire_write_byte
+                                   1007 ;	test_temp.c: 323: uint8_t lsb = onewire_read_byte(); // LSB = partie fractionnaire
+      00048C CDr04r4E         [ 4] 1008 	call	_onewire_read_byte
+                                   1009 ;	test_temp.c: 324: uint8_t msb = onewire_read_byte(); // MSB = partie entière signée
+      00048F 88               [ 1] 1010 	push	a
+      000490 CDr04r4E         [ 4] 1011 	call	_onewire_read_byte
+      000493 95               [ 1] 1012 	ld	xh, a
+      000494 84               [ 1] 1013 	pop	a
+                                   1014 ;	test_temp.c: 326: return ((int16_t)msb << 8) | lsb;  // Fusionne les 2 octets
+      000495 0F 02            [ 1] 1015 	clr	(0x02, sp)
+      000497 0F 03            [ 1] 1016 	clr	(0x03, sp)
+      000499 1A 02            [ 1] 1017 	or	a, (0x02, sp)
+      00049B 02               [ 1] 1018 	rlwa	x
+      00049C 1A 03            [ 1] 1019 	or	a, (0x03, sp)
+      00049E 95               [ 1] 1020 	ld	xh, a
+                                   1021 ;	test_temp.c: 327: }
+      00049F 5B 04            [ 2] 1022 	addw	sp, #4
+      0004A1 81               [ 4] 1023 	ret
+                                   1024 ;	test_temp.c: 330: void main() {
+                                   1025 ;	-----------------------------------------
+                                   1026 ;	 function main
+                                   1027 ;	-----------------------------------------
+      0004A2                       1028 _main:
+      0004A2 52 04            [ 2] 1029 	sub	sp, #4
+                                   1030 ;	test_temp.c: 331: setup();
+      0004A4 CDr01r24         [ 4] 1031 	call	_setup
+                                   1032 ;	test_temp.c: 332: uart_config();
+      0004A7 CDr00r00         [ 4] 1033 	call	_uart_config
+                                   1034 ;	test_temp.c: 334: PD_DDR &= ~(1 << 3);
+      0004AA 72 17 50 11      [ 1] 1035 	bres	0x5011, #3
+                                   1036 ;	test_temp.c: 335: PD_CR1 |= (1 << 3);
+      0004AE 72 16 50 12      [ 1] 1037 	bset	0x5012, #3
+                                   1038 ;	test_temp.c: 337: uint16_t temp_x100 = 2430; // Valeur de départ par défaut
+      0004B2 AE 09 7E         [ 2] 1039 	ldw	x, #0x097e
+      0004B5 1F 01            [ 2] 1040 	ldw	(0x01, sp), x
+                                   1041 ;	test_temp.c: 338: uint16_t counter = 0;
+      0004B7 5F               [ 1] 1042 	clrw	x
+      0004B8 1F 03            [ 2] 1043 	ldw	(0x03, sp), x
+                                   1044 ;	test_temp.c: 340: ds18b20_start_conversion(); // Démarre première conversion
+      0004BA CDr04r70         [ 4] 1045 	call	_ds18b20_start_conversion
+                                   1046 ;	test_temp.c: 342: while (1) {
+      0004BD                       1047 00104$:
+                                   1048 ;	test_temp.c: 344: display_int(temp_x100);
+      0004BD 1E 01            [ 2] 1049 	ldw	x, (0x01, sp)
+      0004BF CDr02r61         [ 4] 1050 	call	_display_int
+                                   1051 ;	test_temp.c: 346: delay_ms(5); // assez long pour multiplexage stable
+      0004C2 AE 00 05         [ 2] 1052 	ldw	x, #0x0005
+      0004C5 CDr01r00         [ 4] 1053 	call	_delay_ms
+                                   1054 ;	test_temp.c: 348: counter += 5;
+      0004C8 1E 03            [ 2] 1055 	ldw	x, (0x03, sp)
+      0004CA 1C 00 05         [ 2] 1056 	addw	x, #0x0005
+                                   1057 ;	test_temp.c: 349: if (counter >= 750) {
+      0004CD 1F 03            [ 2] 1058 	ldw	(0x03, sp), x
+      0004CF A3 02 EE         [ 2] 1059 	cpw	x, #0x02ee
+      0004D2 25 E9            [ 1] 1060 	jrc	00104$
+                                   1061 ;	test_temp.c: 350: counter = 0;
+      0004D4 5F               [ 1] 1062 	clrw	x
+      0004D5 1F 03            [ 2] 1063 	ldw	(0x03, sp), x
+                                   1064 ;	test_temp.c: 353: int16_t raw = ds18b20_read_raw();
+      0004D7 CDr04r7D         [ 4] 1065 	call	_ds18b20_read_raw
+                                   1066 ;	test_temp.c: 354: temp_x100 = (raw * 625UL) / 100;
+      0004DA 90 5F            [ 1] 1067 	clrw	y
+      0004DC 5D               [ 2] 1068 	tnzw	x
+      0004DD 2A 02            [ 1] 1069 	jrpl	00119$
+      0004DF 90 5A            [ 2] 1070 	decw	y
+      0004E1                       1071 00119$:
+      0004E1 89               [ 2] 1072 	pushw	x
+      0004E2 90 89            [ 2] 1073 	pushw	y
+      0004E4 4B 71            [ 1] 1074 	push	#0x71
+      0004E6 4B 02            [ 1] 1075 	push	#0x02
+      0004E8 5F               [ 1] 1076 	clrw	x
+      0004E9 89               [ 2] 1077 	pushw	x
+      0004EA CDr00r00         [ 4] 1078 	call	__mullong
+      0004ED 5B 08            [ 2] 1079 	addw	sp, #8
+      0004EF 4B 64            [ 1] 1080 	push	#0x64
+      0004F1 4B 00            [ 1] 1081 	push	#0x00
+      0004F3 4B 00            [ 1] 1082 	push	#0x00
+      0004F5 4B 00            [ 1] 1083 	push	#0x00
+      0004F7 89               [ 2] 1084 	pushw	x
+      0004F8 90 89            [ 2] 1085 	pushw	y
+      0004FA CDr00r00         [ 4] 1086 	call	__divulong
+      0004FD 5B 08            [ 2] 1087 	addw	sp, #8
+      0004FF 1F 01            [ 2] 1088 	ldw	(0x01, sp), x
+                                   1089 ;	test_temp.c: 357: ds18b20_start_conversion();
+      000501 CDr04r70         [ 4] 1090 	call	_ds18b20_start_conversion
+      000504 20 B7            [ 2] 1091 	jra	00104$
+                                   1092 ;	test_temp.c: 360: }
+      000506 5B 04            [ 2] 1093 	addw	sp, #4
+      000508 81               [ 4] 1094 	ret
+                                   1095 	.area CODE
+                                   1096 	.area CONST
+      000000                       1097 _digit_segments:
+      000000 3F                    1098 	.db #0x3f	; 63
+      000001 06                    1099 	.db #0x06	; 6
+      000002 5B                    1100 	.db #0x5b	; 91
+      000003 4F                    1101 	.db #0x4f	; 79	'O'
+      000004 66                    1102 	.db #0x66	; 102	'f'
+      000005 6D                    1103 	.db #0x6d	; 109	'm'
+      000006 7D                    1104 	.db #0x7d	; 125
+      000007 07                    1105 	.db #0x07	; 7
+      000008 7F                    1106 	.db #0x7f	; 127
+      000009 6F                    1107 	.db #0x6f	; 111	'o'
+                                   1108 	.area INITIALIZER
+      000000                       1109 __xinit__digits:
+      000000 00                    1110 	.db #0x00	; 0
+      000001 00                    1111 	.db #0x00	; 0
+      000002 00                    1112 	.db #0x00	; 0
+      000003 00                    1113 	.db #0x00	; 0
+                                   1114 	.area CABS (ABS)

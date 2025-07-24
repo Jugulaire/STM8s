@@ -1,0 +1,1025 @@
+                                      1 ;--------------------------------------------------------
+                                      2 ; File Created by SDCC : free open source ANSI-C Compiler
+                                      3 ; Version 4.2.0 #13081 (Linux)
+                                      4 ;--------------------------------------------------------
+                                      5 	.module nokia
+                                      6 	.optsdcc -mstm8
+                                      7 	
+                                      8 ;--------------------------------------------------------
+                                      9 ; Public variables in this module
+                                     10 ;--------------------------------------------------------
+                                     11 	.globl _big_char_deg
+                                     12 	.globl _big_char_dot
+                                     13 	.globl _big_char_C
+                                     14 	.globl _big_digit_9
+                                     15 	.globl _big_digit_8
+                                     16 	.globl _big_digit_7
+                                     17 	.globl _big_digit_6
+                                     18 	.globl _big_digit_5
+                                     19 	.globl _big_digit_4
+                                     20 	.globl _big_digit_3
+                                     21 	.globl _big_digit_2
+                                     22 	.globl _big_digit_1
+                                     23 	.globl _big_digit_0
+                                     24 	.globl _main
+                                     25 	.globl _lcd_print_temperature
+                                     26 	.globl _lcd_draw_char_small
+                                     27 	.globl _lcd_draw_8x8_char
+                                     28 	.globl _lcd_clear
+                                     29 	.globl _lcd_init
+                                     30 	.globl _lcd_write_data
+                                     31 	.globl _lcd_write_cmd
+                                     32 	.globl _lcd_send_byte
+                                     33 	.globl _ds18b20_read_raw
+                                     34 	.globl _ds18b20_start_conversion
+                                     35 	.globl _onewire_read_byte
+                                     36 	.globl _onewire_write_byte
+                                     37 	.globl _onewire_read_bit
+                                     38 	.globl _onewire_write_bit
+                                     39 	.globl _onewire_reset
+                                     40 	.globl _delay_ms
+                                     41 	.globl _delay_us
+                                     42 	.globl _sprintf
+                                     43 	.globl _big_digits
+                                     44 ;--------------------------------------------------------
+                                     45 ; ram data
+                                     46 ;--------------------------------------------------------
+                                     47 	.area DATA
+                                     48 ;--------------------------------------------------------
+                                     49 ; ram data
+                                     50 ;--------------------------------------------------------
+                                     51 	.area INITIALIZED
+      000000                         52 _big_digits::
+      000000                         53 	.ds 20
+                                     54 ;--------------------------------------------------------
+                                     55 ; Stack segment in internal ram
+                                     56 ;--------------------------------------------------------
+                                     57 	.area	SSEG
+      000000                         58 __start__stack:
+      000000                         59 	.ds	1
+                                     60 
+                                     61 ;--------------------------------------------------------
+                                     62 ; absolute external ram data
+                                     63 ;--------------------------------------------------------
+                                     64 	.area DABS (ABS)
+                                     65 
+                                     66 ; default segment ordering for linker
+                                     67 	.area HOME
+                                     68 	.area GSINIT
+                                     69 	.area GSFINAL
+                                     70 	.area CONST
+                                     71 	.area INITIALIZER
+                                     72 	.area CODE
+                                     73 
+                                     74 ;--------------------------------------------------------
+                                     75 ; interrupt vector
+                                     76 ;--------------------------------------------------------
+                                     77 	.area HOME
+      000000                         78 __interrupt_vect:
+      000000 82v00u00u00             79 	int s_GSINIT ; reset
+                                     80 ;--------------------------------------------------------
+                                     81 ; global & static initialisations
+                                     82 ;--------------------------------------------------------
+                                     83 	.area HOME
+                                     84 	.area GSINIT
+                                     85 	.area GSFINAL
+                                     86 	.area GSINIT
+      000000                         87 __sdcc_init_data:
+                                     88 ; stm8_genXINIT() start
+      000000 AEr00r00         [ 2]   89 	ldw x, #l_DATA
+      000003 27 07            [ 1]   90 	jreq	00002$
+      000005                         91 00001$:
+      000005 72 4FuFFuFF      [ 1]   92 	clr (s_DATA - 1, x)
+      000009 5A               [ 2]   93 	decw x
+      00000A 26 F9            [ 1]   94 	jrne	00001$
+      00000C                         95 00002$:
+      00000C AEr00r00         [ 2]   96 	ldw	x, #l_INITIALIZER
+      00000F 27 09            [ 1]   97 	jreq	00004$
+      000011                         98 00003$:
+      000011 D6uFFuFF         [ 1]   99 	ld	a, (s_INITIALIZER - 1, x)
+      000014 D7uFFuFF         [ 1]  100 	ld	(s_INITIALIZED - 1, x), a
+      000017 5A               [ 2]  101 	decw	x
+      000018 26 F7            [ 1]  102 	jrne	00003$
+      00001A                        103 00004$:
+                                    104 ; stm8_genXINIT() end
+                                    105 	.area GSFINAL
+      000000 CCr00r04         [ 2]  106 	jp	__sdcc_program_startup
+                                    107 ;--------------------------------------------------------
+                                    108 ; Home
+                                    109 ;--------------------------------------------------------
+                                    110 	.area HOME
+                                    111 	.area HOME
+      000004                        112 __sdcc_program_startup:
+      000004 CCr03r76         [ 2]  113 	jp	_main
+                                    114 ;	return from main will return to caller
+                                    115 ;--------------------------------------------------------
+                                    116 ; code
+                                    117 ;--------------------------------------------------------
+                                    118 	.area CODE
+                                    119 ;	nokia.c: 42: void delay_us(uint16_t us) {
+                                    120 ;	-----------------------------------------
+                                    121 ;	 function delay_us
+                                    122 ;	-----------------------------------------
+      000000                        123 _delay_us:
+                                    124 ;	nokia.c: 43: while(us--) {
+      000000                        125 00101$:
+      000000 90 93            [ 1]  126 	ldw	y, x
+      000002 5A               [ 2]  127 	decw	x
+      000003 90 5D            [ 2]  128 	tnzw	y
+      000005 26 01            [ 1]  129 	jrne	00117$
+      000007 81               [ 4]  130 	ret
+      000008                        131 00117$:
+                                    132 ;	nokia.c: 44: __asm__("nop"); __asm__("nop"); __asm__("nop");
+      000008 9D               [ 1]  133 	nop
+      000009 9D               [ 1]  134 	nop
+      00000A 9D               [ 1]  135 	nop
+                                    136 ;	nokia.c: 45: __asm__("nop"); __asm__("nop"); __asm__("nop");
+      00000B 9D               [ 1]  137 	nop
+      00000C 9D               [ 1]  138 	nop
+      00000D 9D               [ 1]  139 	nop
+      00000E 20 F0            [ 2]  140 	jra	00101$
+                                    141 ;	nokia.c: 47: }
+      000010 81               [ 4]  142 	ret
+                                    143 ;	nokia.c: 49: void delay_ms(uint16_t ms) {
+                                    144 ;	-----------------------------------------
+                                    145 ;	 function delay_ms
+                                    146 ;	-----------------------------------------
+      000011                        147 _delay_ms:
+      000011 52 0A            [ 2]  148 	sub	sp, #10
+      000013 1F 05            [ 2]  149 	ldw	(0x05, sp), x
+                                    150 ;	nokia.c: 51: for (i = 0; i < ((F_CPU / 18000UL) * ms); i++)
+      000015 5F               [ 1]  151 	clrw	x
+      000016 1F 09            [ 2]  152 	ldw	(0x09, sp), x
+      000018 1F 07            [ 2]  153 	ldw	(0x07, sp), x
+      00001A                        154 00103$:
+      00001A 1E 05            [ 2]  155 	ldw	x, (0x05, sp)
+      00001C 89               [ 2]  156 	pushw	x
+      00001D AE 03 78         [ 2]  157 	ldw	x, #0x0378
+      000020 CDr00r00         [ 4]  158 	call	___muluint2ulong
+      000023 5B 02            [ 2]  159 	addw	sp, #2
+      000025 1F 03            [ 2]  160 	ldw	(0x03, sp), x
+      000027 17 01            [ 2]  161 	ldw	(0x01, sp), y
+      000029 1E 09            [ 2]  162 	ldw	x, (0x09, sp)
+      00002B 13 03            [ 2]  163 	cpw	x, (0x03, sp)
+      00002D 7B 08            [ 1]  164 	ld	a, (0x08, sp)
+      00002F 12 02            [ 1]  165 	sbc	a, (0x02, sp)
+      000031 7B 07            [ 1]  166 	ld	a, (0x07, sp)
+      000033 12 01            [ 1]  167 	sbc	a, (0x01, sp)
+      000035 24 0F            [ 1]  168 	jrnc	00105$
+                                    169 ;	nokia.c: 52: __asm__("nop");
+      000037 9D               [ 1]  170 	nop
+                                    171 ;	nokia.c: 51: for (i = 0; i < ((F_CPU / 18000UL) * ms); i++)
+      000038 1E 09            [ 2]  172 	ldw	x, (0x09, sp)
+      00003A 5C               [ 1]  173 	incw	x
+      00003B 1F 09            [ 2]  174 	ldw	(0x09, sp), x
+      00003D 26 DB            [ 1]  175 	jrne	00103$
+      00003F 1E 07            [ 2]  176 	ldw	x, (0x07, sp)
+      000041 5C               [ 1]  177 	incw	x
+      000042 1F 07            [ 2]  178 	ldw	(0x07, sp), x
+      000044 20 D4            [ 2]  179 	jra	00103$
+      000046                        180 00105$:
+                                    181 ;	nokia.c: 53: }
+      000046 5B 0A            [ 2]  182 	addw	sp, #10
+      000048 81               [ 4]  183 	ret
+                                    184 ;	nokia.c: 56: uint8_t onewire_reset(void) {
+                                    185 ;	-----------------------------------------
+                                    186 ;	 function onewire_reset
+                                    187 ;	-----------------------------------------
+      000049                        188 _onewire_reset:
+                                    189 ;	nokia.c: 57: DS_OUTPUT(); DS_LOW();
+      000049 72 1A 50 07      [ 1]  190 	bset	0x5007, #5
+      00004D 72 1B 50 05      [ 1]  191 	bres	0x5005, #5
+                                    192 ;	nokia.c: 58: delay_us(480);
+      000051 AE 01 E0         [ 2]  193 	ldw	x, #0x01e0
+      000054 CDr00r00         [ 4]  194 	call	_delay_us
+                                    195 ;	nokia.c: 59: DS_INPUT();
+      000057 72 1B 50 07      [ 1]  196 	bres	0x5007, #5
+                                    197 ;	nokia.c: 60: delay_us(70);
+      00005B AE 00 46         [ 2]  198 	ldw	x, #0x0046
+      00005E CDr00r00         [ 4]  199 	call	_delay_us
+                                    200 ;	nokia.c: 61: uint8_t presence = !DS_READ();
+      000061 C6 50 06         [ 1]  201 	ld	a, 0x5006
+      000064 4E               [ 1]  202 	swap	a
+      000065 44               [ 1]  203 	srl	a
+      000066 A4 01            [ 1]  204 	and	a, #0x01
+      000068 A8 01            [ 1]  205 	xor	a, #0x01
+                                    206 ;	nokia.c: 62: delay_us(410);
+      00006A 88               [ 1]  207 	push	a
+      00006B AE 01 9A         [ 2]  208 	ldw	x, #0x019a
+      00006E CDr00r00         [ 4]  209 	call	_delay_us
+      000071 84               [ 1]  210 	pop	a
+                                    211 ;	nokia.c: 63: return presence;
+                                    212 ;	nokia.c: 64: }
+      000072 81               [ 4]  213 	ret
+                                    214 ;	nokia.c: 66: void onewire_write_bit(uint8_t bit) {
+                                    215 ;	-----------------------------------------
+                                    216 ;	 function onewire_write_bit
+                                    217 ;	-----------------------------------------
+      000073                        218 _onewire_write_bit:
+      000073 88               [ 1]  219 	push	a
+      000074 6B 01            [ 1]  220 	ld	(0x01, sp), a
+                                    221 ;	nokia.c: 67: DS_OUTPUT(); DS_LOW();
+      000076 72 1A 50 07      [ 1]  222 	bset	0x5007, #5
+      00007A 72 1B 50 05      [ 1]  223 	bres	0x5005, #5
+                                    224 ;	nokia.c: 68: delay_us(bit ? 6 : 60);
+      00007E 0D 01            [ 1]  225 	tnz	(0x01, sp)
+      000080 27 04            [ 1]  226 	jreq	00103$
+      000082 AE 00 06         [ 2]  227 	ldw	x, #0x0006
+      000085 BC                     228 	.byte 0xbc
+      000086                        229 00103$:
+      000086 AE 00 3C         [ 2]  230 	ldw	x, #0x003c
+      000089                        231 00104$:
+      000089 CDr00r00         [ 4]  232 	call	_delay_us
+                                    233 ;	nokia.c: 69: DS_INPUT();
+      00008C 72 1B 50 07      [ 1]  234 	bres	0x5007, #5
+                                    235 ;	nokia.c: 70: delay_us(bit ? 64 : 10);
+      000090 0D 01            [ 1]  236 	tnz	(0x01, sp)
+      000092 27 05            [ 1]  237 	jreq	00105$
+      000094 AE 00 40         [ 2]  238 	ldw	x, #0x0040
+      000097 20 03            [ 2]  239 	jra	00106$
+      000099                        240 00105$:
+      000099 AE 00 0A         [ 2]  241 	ldw	x, #0x000a
+      00009C                        242 00106$:
+      00009C 84               [ 1]  243 	pop	a
+      00009D CCr00r00         [ 2]  244 	jp	_delay_us
+                                    245 ;	nokia.c: 71: }
+      0000A0 84               [ 1]  246 	pop	a
+      0000A1 81               [ 4]  247 	ret
+                                    248 ;	nokia.c: 73: uint8_t onewire_read_bit(void) {
+                                    249 ;	-----------------------------------------
+                                    250 ;	 function onewire_read_bit
+                                    251 ;	-----------------------------------------
+      0000A2                        252 _onewire_read_bit:
+                                    253 ;	nokia.c: 75: DS_OUTPUT(); DS_LOW();
+      0000A2 72 1A 50 07      [ 1]  254 	bset	0x5007, #5
+      0000A6 72 1B 50 05      [ 1]  255 	bres	0x5005, #5
+                                    256 ;	nokia.c: 76: delay_us(6);
+      0000AA AE 00 06         [ 2]  257 	ldw	x, #0x0006
+      0000AD CDr00r00         [ 4]  258 	call	_delay_us
+                                    259 ;	nokia.c: 77: DS_INPUT();
+      0000B0 72 1B 50 07      [ 1]  260 	bres	0x5007, #5
+                                    261 ;	nokia.c: 78: delay_us(9);
+      0000B4 AE 00 09         [ 2]  262 	ldw	x, #0x0009
+      0000B7 CDr00r00         [ 4]  263 	call	_delay_us
+                                    264 ;	nokia.c: 79: bit = (DS_READ() ? 1 : 0);
+      0000BA 72 0B 50 06 03   [ 2]  265 	btjf	0x5006, #5, 00103$
+      0000BF 5F               [ 1]  266 	clrw	x
+      0000C0 5C               [ 1]  267 	incw	x
+      0000C1 21                     268 	.byte 0x21
+      0000C2                        269 00103$:
+      0000C2 5F               [ 1]  270 	clrw	x
+      0000C3                        271 00104$:
+      0000C3 9F               [ 1]  272 	ld	a, xl
+                                    273 ;	nokia.c: 80: delay_us(55);
+      0000C4 88               [ 1]  274 	push	a
+      0000C5 AE 00 37         [ 2]  275 	ldw	x, #0x0037
+      0000C8 CDr00r00         [ 4]  276 	call	_delay_us
+      0000CB 84               [ 1]  277 	pop	a
+                                    278 ;	nokia.c: 81: return bit;
+                                    279 ;	nokia.c: 82: }
+      0000CC 81               [ 4]  280 	ret
+                                    281 ;	nokia.c: 84: void onewire_write_byte(uint8_t byte) {
+                                    282 ;	-----------------------------------------
+                                    283 ;	 function onewire_write_byte
+                                    284 ;	-----------------------------------------
+      0000CD                        285 _onewire_write_byte:
+      0000CD 52 02            [ 2]  286 	sub	sp, #2
+      0000CF 6B 01            [ 1]  287 	ld	(0x01, sp), a
+                                    288 ;	nokia.c: 85: for (uint8_t i = 0; i < 8; i++) {
+      0000D1 0F 02            [ 1]  289 	clr	(0x02, sp)
+      0000D3                        290 00103$:
+      0000D3 7B 02            [ 1]  291 	ld	a, (0x02, sp)
+      0000D5 A1 08            [ 1]  292 	cp	a, #0x08
+      0000D7 24 0D            [ 1]  293 	jrnc	00105$
+                                    294 ;	nokia.c: 86: onewire_write_bit(byte & 0x01);
+      0000D9 7B 01            [ 1]  295 	ld	a, (0x01, sp)
+      0000DB A4 01            [ 1]  296 	and	a, #0x01
+      0000DD CDr00r73         [ 4]  297 	call	_onewire_write_bit
+                                    298 ;	nokia.c: 87: byte >>= 1;
+      0000E0 04 01            [ 1]  299 	srl	(0x01, sp)
+                                    300 ;	nokia.c: 85: for (uint8_t i = 0; i < 8; i++) {
+      0000E2 0C 02            [ 1]  301 	inc	(0x02, sp)
+      0000E4 20 ED            [ 2]  302 	jra	00103$
+      0000E6                        303 00105$:
+                                    304 ;	nokia.c: 89: }
+      0000E6 5B 02            [ 2]  305 	addw	sp, #2
+      0000E8 81               [ 4]  306 	ret
+                                    307 ;	nokia.c: 91: uint8_t onewire_read_byte(void) {
+                                    308 ;	-----------------------------------------
+                                    309 ;	 function onewire_read_byte
+                                    310 ;	-----------------------------------------
+      0000E9                        311 _onewire_read_byte:
+      0000E9 52 02            [ 2]  312 	sub	sp, #2
+                                    313 ;	nokia.c: 92: uint8_t byte = 0;
+      0000EB 0F 01            [ 1]  314 	clr	(0x01, sp)
+                                    315 ;	nokia.c: 93: for (uint8_t i = 0; i < 8; i++) {
+      0000ED 0F 02            [ 1]  316 	clr	(0x02, sp)
+      0000EF                        317 00105$:
+      0000EF 7B 02            [ 1]  318 	ld	a, (0x02, sp)
+      0000F1 A1 08            [ 1]  319 	cp	a, #0x08
+      0000F3 24 11            [ 1]  320 	jrnc	00103$
+                                    321 ;	nokia.c: 94: byte >>= 1;
+      0000F5 04 01            [ 1]  322 	srl	(0x01, sp)
+                                    323 ;	nokia.c: 95: if (onewire_read_bit()) byte |= 0x80;
+      0000F7 CDr00rA2         [ 4]  324 	call	_onewire_read_bit
+      0000FA 4D               [ 1]  325 	tnz	a
+      0000FB 27 05            [ 1]  326 	jreq	00106$
+      0000FD 08 01            [ 1]  327 	sll	(0x01, sp)
+      0000FF 99               [ 1]  328 	scf
+      000100 06 01            [ 1]  329 	rrc	(0x01, sp)
+      000102                        330 00106$:
+                                    331 ;	nokia.c: 93: for (uint8_t i = 0; i < 8; i++) {
+      000102 0C 02            [ 1]  332 	inc	(0x02, sp)
+      000104 20 E9            [ 2]  333 	jra	00105$
+      000106                        334 00103$:
+                                    335 ;	nokia.c: 97: return byte;
+      000106 7B 01            [ 1]  336 	ld	a, (0x01, sp)
+                                    337 ;	nokia.c: 98: }
+      000108 5B 02            [ 2]  338 	addw	sp, #2
+      00010A 81               [ 4]  339 	ret
+                                    340 ;	nokia.c: 100: void ds18b20_start_conversion(void) {
+                                    341 ;	-----------------------------------------
+                                    342 ;	 function ds18b20_start_conversion
+                                    343 ;	-----------------------------------------
+      00010B                        344 _ds18b20_start_conversion:
+                                    345 ;	nokia.c: 101: onewire_reset();
+      00010B CDr00r49         [ 4]  346 	call	_onewire_reset
+                                    347 ;	nokia.c: 102: onewire_write_byte(0xCC);
+      00010E A6 CC            [ 1]  348 	ld	a, #0xcc
+      000110 CDr00rCD         [ 4]  349 	call	_onewire_write_byte
+                                    350 ;	nokia.c: 103: onewire_write_byte(0x44);
+      000113 A6 44            [ 1]  351 	ld	a, #0x44
+                                    352 ;	nokia.c: 104: }
+      000115 CCr00rCD         [ 2]  353 	jp	_onewire_write_byte
+                                    354 ;	nokia.c: 106: int16_t ds18b20_read_raw(void) {
+                                    355 ;	-----------------------------------------
+                                    356 ;	 function ds18b20_read_raw
+                                    357 ;	-----------------------------------------
+      000118                        358 _ds18b20_read_raw:
+      000118 52 04            [ 2]  359 	sub	sp, #4
+                                    360 ;	nokia.c: 107: onewire_reset();
+      00011A CDr00r49         [ 4]  361 	call	_onewire_reset
+                                    362 ;	nokia.c: 108: onewire_write_byte(0xCC);
+      00011D A6 CC            [ 1]  363 	ld	a, #0xcc
+      00011F CDr00rCD         [ 4]  364 	call	_onewire_write_byte
+                                    365 ;	nokia.c: 109: onewire_write_byte(0xBE);
+      000122 A6 BE            [ 1]  366 	ld	a, #0xbe
+      000124 CDr00rCD         [ 4]  367 	call	_onewire_write_byte
+                                    368 ;	nokia.c: 110: uint8_t lsb = onewire_read_byte();
+      000127 CDr00rE9         [ 4]  369 	call	_onewire_read_byte
+                                    370 ;	nokia.c: 111: uint8_t msb = onewire_read_byte();
+      00012A 88               [ 1]  371 	push	a
+      00012B CDr00rE9         [ 4]  372 	call	_onewire_read_byte
+      00012E 95               [ 1]  373 	ld	xh, a
+      00012F 84               [ 1]  374 	pop	a
+                                    375 ;	nokia.c: 112: return ((int16_t)msb << 8) | lsb;
+      000130 0F 02            [ 1]  376 	clr	(0x02, sp)
+      000132 0F 03            [ 1]  377 	clr	(0x03, sp)
+      000134 1A 02            [ 1]  378 	or	a, (0x02, sp)
+      000136 02               [ 1]  379 	rlwa	x
+      000137 1A 03            [ 1]  380 	or	a, (0x03, sp)
+      000139 95               [ 1]  381 	ld	xh, a
+                                    382 ;	nokia.c: 113: }
+      00013A 5B 04            [ 2]  383 	addw	sp, #4
+      00013C 81               [ 4]  384 	ret
+                                    385 ;	nokia.c: 117: void lcd_send_byte(uint8_t data) {
+                                    386 ;	-----------------------------------------
+                                    387 ;	 function lcd_send_byte
+                                    388 ;	-----------------------------------------
+      00013D                        389 _lcd_send_byte:
+      00013D 88               [ 1]  390 	push	a
+      00013E 95               [ 1]  391 	ld	xh, a
+                                    392 ;	nokia.c: 118: for (uint8_t i = 0; i < 8; i++) {
+      00013F 0F 01            [ 1]  393 	clr	(0x01, sp)
+      000141                        394 00106$:
+      000141 7B 01            [ 1]  395 	ld	a, (0x01, sp)
+      000143 A1 08            [ 1]  396 	cp	a, #0x08
+      000145 24 21            [ 1]  397 	jrnc	00108$
+                                    398 ;	nokia.c: 119: if (data & 0x80) LCD_DIN_HIGH();  // Si bit courant = 1, ligne DIN à 1
+      000147 C6 50 0A         [ 1]  399 	ld	a, 0x500a
+      00014A 5D               [ 2]  400 	tnzw	x
+      00014B 2A 07            [ 1]  401 	jrpl	00102$
+      00014D AA 40            [ 1]  402 	or	a, #0x40
+      00014F C7 50 0A         [ 1]  403 	ld	0x500a, a
+      000152 20 05            [ 2]  404 	jra	00103$
+      000154                        405 00102$:
+                                    406 ;	nokia.c: 120: else LCD_DIN_LOW();               // Sinon ligne DIN à 0
+      000154 A4 BF            [ 1]  407 	and	a, #0xbf
+      000156 C7 50 0A         [ 1]  408 	ld	0x500a, a
+      000159                        409 00103$:
+                                    410 ;	nokia.c: 122: LCD_CLK_HIGH();  // Front montant : le LCD lit le bit ici
+      000159 72 1A 50 0A      [ 1]  411 	bset	0x500a, #5
+                                    412 ;	nokia.c: 123: LCD_CLK_LOW();   // Front descendant : prêt pour le bit suivant
+      00015D 72 1B 50 0A      [ 1]  413 	bres	0x500a, #5
+                                    414 ;	nokia.c: 125: data <<= 1;  // Décale vers la gauche pour le prochain bit
+      000161 9E               [ 1]  415 	ld	a, xh
+      000162 48               [ 1]  416 	sll	a
+      000163 95               [ 1]  417 	ld	xh, a
+                                    418 ;	nokia.c: 118: for (uint8_t i = 0; i < 8; i++) {
+      000164 0C 01            [ 1]  419 	inc	(0x01, sp)
+      000166 20 D9            [ 2]  420 	jra	00106$
+      000168                        421 00108$:
+                                    422 ;	nokia.c: 127: }
+      000168 84               [ 1]  423 	pop	a
+      000169 81               [ 4]  424 	ret
+                                    425 ;	nokia.c: 131: void lcd_write_cmd(uint8_t cmd) {
+                                    426 ;	-----------------------------------------
+                                    427 ;	 function lcd_write_cmd
+                                    428 ;	-----------------------------------------
+      00016A                        429 _lcd_write_cmd:
+      00016A 97               [ 1]  430 	ld	xl, a
+                                    431 ;	nokia.c: 132: LCD_DC_LOW();     // On sélectionne le mode "commande"
+      00016B 72 19 50 0A      [ 1]  432 	bres	0x500a, #4
+                                    433 ;	nokia.c: 133: LCD_CE_LOW();     // Active la communication avec l'écran
+      00016F 72 13 50 0F      [ 1]  434 	bres	0x500f, #1
+                                    435 ;	nokia.c: 134: lcd_send_byte(cmd); // Envoie la commande
+      000173 9F               [ 1]  436 	ld	a, xl
+      000174 CDr01r3D         [ 4]  437 	call	_lcd_send_byte
+                                    438 ;	nokia.c: 135: LCD_CE_HIGH();    // Termine la communication
+      000177 72 12 50 0F      [ 1]  439 	bset	0x500f, #1
+                                    440 ;	nokia.c: 136: }
+      00017B 81               [ 4]  441 	ret
+                                    442 ;	nokia.c: 140: void lcd_write_data(uint8_t data) {
+                                    443 ;	-----------------------------------------
+                                    444 ;	 function lcd_write_data
+                                    445 ;	-----------------------------------------
+      00017C                        446 _lcd_write_data:
+      00017C 97               [ 1]  447 	ld	xl, a
+                                    448 ;	nokia.c: 141: LCD_DC_HIGH();     // Mode "donnée"
+      00017D 72 18 50 0A      [ 1]  449 	bset	0x500a, #4
+                                    450 ;	nokia.c: 142: LCD_CE_LOW();      // Active la communication avec l'écran
+      000181 72 13 50 0F      [ 1]  451 	bres	0x500f, #1
+                                    452 ;	nokia.c: 143: lcd_send_byte(data);  // Envoie la donnée (1 octet = 8 pixels verticaux)
+      000185 9F               [ 1]  453 	ld	a, xl
+      000186 CDr01r3D         [ 4]  454 	call	_lcd_send_byte
+                                    455 ;	nokia.c: 144: LCD_CE_HIGH();     // Termine la communication
+      000189 72 12 50 0F      [ 1]  456 	bset	0x500f, #1
+                                    457 ;	nokia.c: 145: }
+      00018D 81               [ 4]  458 	ret
+                                    459 ;	nokia.c: 149: void lcd_init(void) {
+                                    460 ;	-----------------------------------------
+                                    461 ;	 function lcd_init
+                                    462 ;	-----------------------------------------
+      00018E                        463 _lcd_init:
+                                    464 ;	nokia.c: 151: PC_DDR |= (1 << 4) | (1 << 5) | (1 << 6) | (1 << 7);
+      00018E C6 50 0C         [ 1]  465 	ld	a, 0x500c
+      000191 AA F0            [ 1]  466 	or	a, #0xf0
+      000193 C7 50 0C         [ 1]  467 	ld	0x500c, a
+                                    468 ;	nokia.c: 152: PC_CR1 |= (1 << 4) | (1 << 5) | (1 << 6) | (1 << 7);
+      000196 C6 50 0D         [ 1]  469 	ld	a, 0x500d
+      000199 AA F0            [ 1]  470 	or	a, #0xf0
+      00019B C7 50 0D         [ 1]  471 	ld	0x500d, a
+                                    472 ;	nokia.c: 155: PD_DDR |= (1 << 1);
+      00019E 72 12 50 11      [ 1]  473 	bset	0x5011, #1
+                                    474 ;	nokia.c: 156: PD_CR1 |= (1 << 1);
+      0001A2 72 12 50 12      [ 1]  475 	bset	0x5012, #1
+                                    476 ;	nokia.c: 159: LCD_RST_LOW();     // Maintient RST à 0
+      0001A6 72 1F 50 0A      [ 1]  477 	bres	0x500a, #7
+                                    478 ;	nokia.c: 160: delay_ms(100);     // Attend 100 ms
+      0001AA AE 00 64         [ 2]  479 	ldw	x, #0x0064
+      0001AD CDr00r11         [ 4]  480 	call	_delay_ms
+                                    481 ;	nokia.c: 161: LCD_RST_HIGH();    // Libère RST → redémarrage du LCD
+      0001B0 72 1E 50 0A      [ 1]  482 	bset	0x500a, #7
+                                    483 ;	nokia.c: 164: lcd_write_cmd(0x21); // Mode étendu (permet config contraste, température...)
+      0001B4 A6 21            [ 1]  484 	ld	a, #0x21
+      0001B6 CDr01r6A         [ 4]  485 	call	_lcd_write_cmd
+                                    486 ;	nokia.c: 165: lcd_write_cmd(0xB0); // Contraste (valeur entre 0x80 et 0xBF, à adapter si besoin)
+      0001B9 A6 B0            [ 1]  487 	ld	a, #0xb0
+      0001BB CDr01r6A         [ 4]  488 	call	_lcd_write_cmd
+                                    489 ;	nokia.c: 166: lcd_write_cmd(0x04); // Coefficient de température (valeur recommandée)
+      0001BE A6 04            [ 1]  490 	ld	a, #0x04
+      0001C0 CDr01r6A         [ 4]  491 	call	_lcd_write_cmd
+                                    492 ;	nokia.c: 167: lcd_write_cmd(0x14); // Biais LCD (rapport tension segments)
+      0001C3 A6 14            [ 1]  493 	ld	a, #0x14
+      0001C5 CDr01r6A         [ 4]  494 	call	_lcd_write_cmd
+                                    495 ;	nokia.c: 168: lcd_write_cmd(0x20); // Retour en mode basique
+      0001C8 A6 20            [ 1]  496 	ld	a, #0x20
+      0001CA CDr01r6A         [ 4]  497 	call	_lcd_write_cmd
+                                    498 ;	nokia.c: 169: lcd_write_cmd(0x0C); // Affichage normal (pas d’inversion, pas de tout-éteint)
+      0001CD A6 0C            [ 1]  499 	ld	a, #0x0c
+                                    500 ;	nokia.c: 170: }
+      0001CF CCr01r6A         [ 2]  501 	jp	_lcd_write_cmd
+                                    502 ;	nokia.c: 174: void lcd_clear(void) {
+                                    503 ;	-----------------------------------------
+                                    504 ;	 function lcd_clear
+                                    505 ;	-----------------------------------------
+      0001D2                        506 _lcd_clear:
+                                    507 ;	nokia.c: 175: for (uint16_t i = 0; i < 504; i++) {
+      0001D2 5F               [ 1]  508 	clrw	x
+      0001D3                        509 00103$:
+      0001D3 90 93            [ 1]  510 	ldw	y, x
+      0001D5 90 A3 01 F8      [ 2]  511 	cpw	y, #0x01f8
+      0001D9 25 01            [ 1]  512 	jrc	00118$
+      0001DB 81               [ 4]  513 	ret
+      0001DC                        514 00118$:
+                                    515 ;	nokia.c: 176: lcd_write_data(0x00); // Chaque octet = 8 pixels verticaux noirs
+      0001DC 89               [ 2]  516 	pushw	x
+      0001DD 4F               [ 1]  517 	clr	a
+      0001DE CDr01r7C         [ 4]  518 	call	_lcd_write_data
+      0001E1 85               [ 2]  519 	popw	x
+                                    520 ;	nokia.c: 175: for (uint16_t i = 0; i < 504; i++) {
+      0001E2 5C               [ 1]  521 	incw	x
+      0001E3 20 EE            [ 2]  522 	jra	00103$
+                                    523 ;	nokia.c: 178: }
+      0001E5 81               [ 4]  524 	ret
+                                    525 ;	nokia.c: 183: void lcd_draw_8x8_char(const uint8_t* glyph, uint8_t x, uint8_t y) {
+                                    526 ;	-----------------------------------------
+                                    527 ;	 function lcd_draw_8x8_char
+                                    528 ;	-----------------------------------------
+      0001E6                        529 _lcd_draw_8x8_char:
+      0001E6 52 08            [ 2]  530 	sub	sp, #8
+      0001E8 1F 04            [ 2]  531 	ldw	(0x04, sp), x
+      0001EA 6B 03            [ 1]  532 	ld	(0x03, sp), a
+                                    533 ;	nokia.c: 184: for (uint8_t col = 0; col < 8; col++) {
+      0001EC 0F 06            [ 1]  534 	clr	(0x06, sp)
+      0001EE                        535 00109$:
+      0001EE 7B 06            [ 1]  536 	ld	a, (0x06, sp)
+      0001F0 A1 08            [ 1]  537 	cp	a, #0x08
+      0001F2 24 6B            [ 1]  538 	jrnc	00111$
+                                    539 ;	nokia.c: 185: uint8_t out = 0;
+      0001F4 0F 07            [ 1]  540 	clr	(0x07, sp)
+                                    541 ;	nokia.c: 186: for (uint8_t row = 0; row < 8; row++) {
+      0001F6 A6 07            [ 1]  542 	ld	a, #0x07
+      0001F8 10 06            [ 1]  543 	sub	a, (0x06, sp)
+      0001FA 5F               [ 1]  544 	clrw	x
+      0001FB 5C               [ 1]  545 	incw	x
+      0001FC 1F 01            [ 2]  546 	ldw	(0x01, sp), x
+      0001FE 4D               [ 1]  547 	tnz	a
+      0001FF 27 07            [ 1]  548 	jreq	00142$
+      000201                        549 00141$:
+      000201 08 02            [ 1]  550 	sll	(0x02, sp)
+      000203 09 01            [ 1]  551 	rlc	(0x01, sp)
+      000205 4A               [ 1]  552 	dec	a
+      000206 26 F9            [ 1]  553 	jrne	00141$
+      000208                        554 00142$:
+      000208 0F 08            [ 1]  555 	clr	(0x08, sp)
+      00020A                        556 00106$:
+      00020A 7B 08            [ 1]  557 	ld	a, (0x08, sp)
+      00020C A1 08            [ 1]  558 	cp	a, #0x08
+      00020E 24 2A            [ 1]  559 	jrnc	00103$
+                                    560 ;	nokia.c: 187: if (glyph[row] & (1 << (7 - col))) {
+      000210 5F               [ 1]  561 	clrw	x
+      000211 7B 08            [ 1]  562 	ld	a, (0x08, sp)
+      000213 97               [ 1]  563 	ld	xl, a
+      000214 72 FB 04         [ 2]  564 	addw	x, (0x04, sp)
+      000217 F6               [ 1]  565 	ld	a, (x)
+      000218 5F               [ 1]  566 	clrw	x
+      000219 14 02            [ 1]  567 	and	a, (0x02, sp)
+      00021B 01               [ 1]  568 	rrwa	x
+      00021C 14 01            [ 1]  569 	and	a, (0x01, sp)
+      00021E 97               [ 1]  570 	ld	xl, a
+      00021F 5D               [ 2]  571 	tnzw	x
+      000220 27 14            [ 1]  572 	jreq	00107$
+                                    573 ;	nokia.c: 188: out |= (1 << row);  // Transpose bit : ligne → colonne
+      000222 7B 08            [ 1]  574 	ld	a, (0x08, sp)
+      000224 97               [ 1]  575 	ld	xl, a
+      000225 A6 01            [ 1]  576 	ld	a, #0x01
+      000227 88               [ 1]  577 	push	a
+      000228 9F               [ 1]  578 	ld	a, xl
+      000229 4D               [ 1]  579 	tnz	a
+      00022A 27 05            [ 1]  580 	jreq	00146$
+      00022C                        581 00145$:
+      00022C 08 01            [ 1]  582 	sll	(1, sp)
+      00022E 4A               [ 1]  583 	dec	a
+      00022F 26 FB            [ 1]  584 	jrne	00145$
+      000231                        585 00146$:
+      000231 84               [ 1]  586 	pop	a
+      000232 1A 07            [ 1]  587 	or	a, (0x07, sp)
+      000234 6B 07            [ 1]  588 	ld	(0x07, sp), a
+      000236                        589 00107$:
+                                    590 ;	nokia.c: 186: for (uint8_t row = 0; row < 8; row++) {
+      000236 0C 08            [ 1]  591 	inc	(0x08, sp)
+      000238 20 D0            [ 2]  592 	jra	00106$
+      00023A                        593 00103$:
+                                    594 ;	nokia.c: 193: lcd_write_cmd(0x40 | (y / 8));   // Page Y (chaque page = 8 lignes)
+      00023A 7B 0B            [ 1]  595 	ld	a, (0x0b, sp)
+      00023C 5F               [ 1]  596 	clrw	x
+      00023D 97               [ 1]  597 	ld	xl, a
+      00023E 5D               [ 2]  598 	tnzw	x
+      00023F 2A 03            [ 1]  599 	jrpl	00147$
+      000241 1C 00 07         [ 2]  600 	addw	x, #0x0007
+      000244                        601 00147$:
+      000244 57               [ 2]  602 	sraw	x
+      000245 57               [ 2]  603 	sraw	x
+      000246 57               [ 2]  604 	sraw	x
+      000247 9F               [ 1]  605 	ld	a, xl
+      000248 AA 40            [ 1]  606 	or	a, #0x40
+      00024A CDr01r6A         [ 4]  607 	call	_lcd_write_cmd
+                                    608 ;	nokia.c: 194: lcd_write_cmd(0x80 | (x + col)); // Colonne X + décalage actuel
+      00024D 7B 03            [ 1]  609 	ld	a, (0x03, sp)
+      00024F 1B 06            [ 1]  610 	add	a, (0x06, sp)
+      000251 AA 80            [ 1]  611 	or	a, #0x80
+      000253 CDr01r6A         [ 4]  612 	call	_lcd_write_cmd
+                                    613 ;	nokia.c: 196: lcd_write_data(out); // Envoie 1 colonne verticale de 8 pixels
+      000256 7B 07            [ 1]  614 	ld	a, (0x07, sp)
+      000258 CDr01r7C         [ 4]  615 	call	_lcd_write_data
+                                    616 ;	nokia.c: 184: for (uint8_t col = 0; col < 8; col++) {
+      00025B 0C 06            [ 1]  617 	inc	(0x06, sp)
+      00025D 20 8F            [ 2]  618 	jra	00109$
+      00025F                        619 00111$:
+                                    620 ;	nokia.c: 198: }
+      00025F 5B 08            [ 2]  621 	addw	sp, #8
+      000261 85               [ 2]  622 	popw	x
+      000262 84               [ 1]  623 	pop	a
+      000263 FC               [ 2]  624 	jp	(x)
+                                    625 ;	nokia.c: 203: void lcd_draw_char_small(const uint8_t *data, uint8_t x, uint8_t page) {
+                                    626 ;	-----------------------------------------
+                                    627 ;	 function lcd_draw_char_small
+                                    628 ;	-----------------------------------------
+      000264                        629 _lcd_draw_char_small:
+      000264 52 03            [ 2]  630 	sub	sp, #3
+      000266 1F 01            [ 2]  631 	ldw	(0x01, sp), x
+                                    632 ;	nokia.c: 204: lcd_write_cmd(0x80 | x);           // Position horizontale (X)
+      000268 AA 80            [ 1]  633 	or	a, #0x80
+      00026A CDr01r6A         [ 4]  634 	call	_lcd_write_cmd
+                                    635 ;	nokia.c: 205: lcd_write_cmd(0x40 | page);        // Position verticale (page Y de 8 lignes)
+      00026D 7B 06            [ 1]  636 	ld	a, (0x06, sp)
+      00026F AA 40            [ 1]  637 	or	a, #0x40
+      000271 CDr01r6A         [ 4]  638 	call	_lcd_write_cmd
+                                    639 ;	nokia.c: 207: for (uint8_t i = 0; i < 5; i++) {
+      000274 0F 03            [ 1]  640 	clr	(0x03, sp)
+      000276                        641 00103$:
+      000276 7B 03            [ 1]  642 	ld	a, (0x03, sp)
+      000278 A1 05            [ 1]  643 	cp	a, #0x05
+      00027A 24 0F            [ 1]  644 	jrnc	00101$
+                                    645 ;	nokia.c: 208: lcd_write_data(data[i]);       // Envoie les 5 colonnes du caractère
+      00027C 5F               [ 1]  646 	clrw	x
+      00027D 7B 03            [ 1]  647 	ld	a, (0x03, sp)
+      00027F 97               [ 1]  648 	ld	xl, a
+      000280 72 FB 01         [ 2]  649 	addw	x, (0x01, sp)
+      000283 F6               [ 1]  650 	ld	a, (x)
+      000284 CDr01r7C         [ 4]  651 	call	_lcd_write_data
+                                    652 ;	nokia.c: 207: for (uint8_t i = 0; i < 5; i++) {
+      000287 0C 03            [ 1]  653 	inc	(0x03, sp)
+      000289 20 EB            [ 2]  654 	jra	00103$
+      00028B                        655 00101$:
+                                    656 ;	nokia.c: 210: lcd_write_data(0x00); // Ajoute un espace de 1 colonne après
+      00028B 4F               [ 1]  657 	clr	a
+      00028C 1E 04            [ 2]  658 	ldw	x, (4, sp)
+      00028E 1F 05            [ 2]  659 	ldw	(5, sp), x
+      000290 5B 04            [ 2]  660 	addw	sp, #4
+                                    661 ;	nokia.c: 211: }
+      000292 CCr01r7C         [ 2]  662 	jp	_lcd_write_data
+      000295 84               [ 1]  663 	pop	a
+      000296 FC               [ 2]  664 	jp	(x)
+                                    665 ;	nokia.c: 215: void lcd_print_temperature(int16_t temp_x100, uint8_t x, uint8_t y) {
+                                    666 ;	-----------------------------------------
+                                    667 ;	 function lcd_print_temperature
+                                    668 ;	-----------------------------------------
+      000297                        669 _lcd_print_temperature:
+      000297 52 0F            [ 2]  670 	sub	sp, #15
+      000299 6B 0E            [ 1]  671 	ld	(0x0e, sp), a
+                                    672 ;	nokia.c: 219: int int_part = temp_x100 / 100;
+      00029B 89               [ 2]  673 	pushw	x
+      00029C 4B 64            [ 1]  674 	push	#0x64
+      00029E 4B 00            [ 1]  675 	push	#0x00
+      0002A0 CDr00r00         [ 4]  676 	call	__divsint
+      0002A3 51               [ 1]  677 	exgw	x, y
+      0002A4 85               [ 2]  678 	popw	x
+      0002A5 17 01            [ 2]  679 	ldw	(0x01, sp), y
+                                    680 ;	nokia.c: 220: int frac_part = temp_x100 % 100;
+      0002A7 89               [ 2]  681 	pushw	x
+      0002A8 4B 64            [ 1]  682 	push	#0x64
+      0002AA 4B 00            [ 1]  683 	push	#0x00
+      0002AC CDr00r00         [ 4]  684 	call	__modsint
+      0002AF 51               [ 1]  685 	exgw	x, y
+      0002B0 85               [ 2]  686 	popw	x
+      0002B1 17 0C            [ 2]  687 	ldw	(0x0c, sp), y
+                                    688 ;	nokia.c: 222: if (temp_x100 < 0) {
+      0002B3 5D               [ 2]  689 	tnzw	x
+      0002B4 2A 1E            [ 1]  690 	jrpl	00102$
+                                    691 ;	nokia.c: 223: int_part = -int_part;
+      0002B6 1E 01            [ 2]  692 	ldw	x, (0x01, sp)
+      0002B8 50               [ 2]  693 	negw	x
+                                    694 ;	nokia.c: 224: frac_part = -frac_part;
+      0002B9 16 0C            [ 2]  695 	ldw	y, (0x0c, sp)
+      0002BB 90 50            [ 2]  696 	negw	y
+                                    697 ;	nokia.c: 225: buf[0] = '-';
+      0002BD A6 2D            [ 1]  698 	ld	a, #0x2d
+      0002BF 6B 03            [ 1]  699 	ld	(0x03, sp), a
+                                    700 ;	nokia.c: 226: sprintf(buf + 1, "%d.%02d", int_part, frac_part);
+      0002C1 90 89            [ 2]  701 	pushw	y
+      0002C3 89               [ 2]  702 	pushw	x
+      0002C4 4Br70            [ 1]  703 	push	#<(___str_0+0)
+      0002C6 4Bs00            [ 1]  704 	push	#((___str_0+0) >> 8)
+      0002C8 96               [ 1]  705 	ldw	x, sp
+      0002C9 1C 00 0A         [ 2]  706 	addw	x, #10
+      0002CC 89               [ 2]  707 	pushw	x
+      0002CD CDr00r00         [ 4]  708 	call	_sprintf
+      0002D0 5B 08            [ 2]  709 	addw	sp, #8
+      0002D2 20 14            [ 2]  710 	jra	00103$
+      0002D4                        711 00102$:
+                                    712 ;	nokia.c: 228: sprintf(buf, "%d.%02d", int_part, frac_part);
+      0002D4 1E 0C            [ 2]  713 	ldw	x, (0x0c, sp)
+      0002D6 89               [ 2]  714 	pushw	x
+      0002D7 1E 03            [ 2]  715 	ldw	x, (0x03, sp)
+      0002D9 89               [ 2]  716 	pushw	x
+      0002DA 4Br70            [ 1]  717 	push	#<(___str_0+0)
+      0002DC 4Bs00            [ 1]  718 	push	#((___str_0+0) >> 8)
+      0002DE 96               [ 1]  719 	ldw	x, sp
+      0002DF 1C 00 09         [ 2]  720 	addw	x, #9
+      0002E2 89               [ 2]  721 	pushw	x
+      0002E3 CDr00r00         [ 4]  722 	call	_sprintf
+      0002E6 5B 08            [ 2]  723 	addw	sp, #8
+      0002E8                        724 00103$:
+                                    725 ;	nokia.c: 231: uint8_t cursor = x; // Position de départ
+      0002E8 7B 0E            [ 1]  726 	ld	a, (0x0e, sp)
+      0002EA 6B 0B            [ 1]  727 	ld	(0x0b, sp), a
+                                    728 ;	nokia.c: 234: for (uint8_t i = 0; buf[i] != '\0'; i++) {
+      0002EC 0F 0F            [ 1]  729 	clr	(0x0f, sp)
+      0002EE                        730 00115$:
+      0002EE 5F               [ 1]  731 	clrw	x
+      0002EF 7B 0F            [ 1]  732 	ld	a, (0x0f, sp)
+      0002F1 97               [ 1]  733 	ld	xl, a
+      0002F2 89               [ 2]  734 	pushw	x
+      0002F3 96               [ 1]  735 	ldw	x, sp
+      0002F4 1C 00 05         [ 2]  736 	addw	x, #5
+      0002F7 72 FB 01         [ 2]  737 	addw	x, (1, sp)
+      0002FA 5B 02            [ 2]  738 	addw	sp, #2
+      0002FC F6               [ 1]  739 	ld	a, (x)
+      0002FD 97               [ 1]  740 	ld	xl, a
+                                    741 ;	nokia.c: 255: cursor += 8; // Avance de 8 pixels pour le prochain caractère
+      0002FE 7B 0B            [ 1]  742 	ld	a, (0x0b, sp)
+      000300 AB 08            [ 1]  743 	add	a, #0x08
+      000302 6B 0C            [ 1]  744 	ld	(0x0c, sp), a
+                                    745 ;	nokia.c: 234: for (uint8_t i = 0; buf[i] != '\0'; i++) {
+      000304 9F               [ 1]  746 	ld	a, xl
+      000305 4D               [ 1]  747 	tnz	a
+      000306 27 51            [ 1]  748 	jreq	00113$
+                                    749 ;	nokia.c: 235: char c = buf[i];
+      000308 9F               [ 1]  750 	ld	a, xl
+                                    751 ;	nokia.c: 237: if (c >= '0' && c <= '9') {
+      000309 6B 0D            [ 1]  752 	ld	(0x0d, sp), a
+      00030B A1 30            [ 1]  753 	cp	a, #0x30
+      00030D 25 1E            [ 1]  754 	jrc	00110$
+      00030F 7B 0D            [ 1]  755 	ld	a, (0x0d, sp)
+      000311 A1 39            [ 1]  756 	cp	a, #0x39
+      000313 22 18            [ 1]  757 	jrugt	00110$
+                                    758 ;	nokia.c: 238: lcd_draw_8x8_char(big_digits[c - '0'], cursor, y);
+      000315 7B 0D            [ 1]  759 	ld	a, (0x0d, sp)
+      000317 A0 30            [ 1]  760 	sub	a, #0x30
+      000319 97               [ 1]  761 	ld	xl, a
+      00031A 49               [ 1]  762 	rlc	a
+      00031B 4F               [ 1]  763 	clr	a
+      00031C A2 00            [ 1]  764 	sbc	a, #0x00
+      00031E 95               [ 1]  765 	ld	xh, a
+      00031F 58               [ 2]  766 	sllw	x
+      000320 DEu00u00         [ 2]  767 	ldw	x, (_big_digits+0, x)
+      000323 7B 12            [ 1]  768 	ld	a, (0x12, sp)
+      000325 88               [ 1]  769 	push	a
+      000326 7B 0C            [ 1]  770 	ld	a, (0x0c, sp)
+      000328 CDr01rE6         [ 4]  771 	call	_lcd_draw_8x8_char
+      00032B 20 24            [ 2]  772 	jra	00111$
+      00032D                        773 00110$:
+                                    774 ;	nokia.c: 239: } else if (c == '.') {
+      00032D 7B 0D            [ 1]  775 	ld	a, (0x0d, sp)
+      00032F A1 2E            [ 1]  776 	cp	a, #0x2e
+      000331 26 0D            [ 1]  777 	jrne	00107$
+                                    778 ;	nokia.c: 240: lcd_draw_8x8_char(big_char_dot, cursor, y);
+      000333 7B 12            [ 1]  779 	ld	a, (0x12, sp)
+      000335 88               [ 1]  780 	push	a
+      000336 7B 0C            [ 1]  781 	ld	a, (0x0c, sp)
+      000338 AEr00r58         [ 2]  782 	ldw	x, #(_big_char_dot+0)
+      00033B CDr01rE6         [ 4]  783 	call	_lcd_draw_8x8_char
+      00033E 20 11            [ 2]  784 	jra	00111$
+      000340                        785 00107$:
+                                    786 ;	nokia.c: 241: } else if (c == '-') {
+      000340 7B 0D            [ 1]  787 	ld	a, (0x0d, sp)
+      000342 A1 2D            [ 1]  788 	cp	a, #0x2d
+      000344 26 0B            [ 1]  789 	jrne	00111$
+                                    790 ;	nokia.c: 252: lcd_draw_8x8_char(minus, cursor, y);
+      000346 7B 12            [ 1]  791 	ld	a, (0x12, sp)
+      000348 88               [ 1]  792 	push	a
+      000349 7B 0C            [ 1]  793 	ld	a, (0x0c, sp)
+      00034B AEr00r68         [ 2]  794 	ldw	x, #(_lcd_print_temperature_minus_262145_71+0)
+      00034E CDr01rE6         [ 4]  795 	call	_lcd_draw_8x8_char
+      000351                        796 00111$:
+                                    797 ;	nokia.c: 255: cursor += 8; // Avance de 8 pixels pour le prochain caractère
+      000351 7B 0C            [ 1]  798 	ld	a, (0x0c, sp)
+      000353 6B 0B            [ 1]  799 	ld	(0x0b, sp), a
+                                    800 ;	nokia.c: 234: for (uint8_t i = 0; buf[i] != '\0'; i++) {
+      000355 0C 0F            [ 1]  801 	inc	(0x0f, sp)
+      000357 20 95            [ 2]  802 	jra	00115$
+      000359                        803 00113$:
+                                    804 ;	nokia.c: 259: lcd_draw_8x8_char(big_char_deg, cursor, y);
+      000359 7B 12            [ 1]  805 	ld	a, (0x12, sp)
+      00035B 88               [ 1]  806 	push	a
+      00035C 7B 0C            [ 1]  807 	ld	a, (0x0c, sp)
+      00035E AEr00r60         [ 2]  808 	ldw	x, #(_big_char_deg+0)
+      000361 CDr01rE6         [ 4]  809 	call	_lcd_draw_8x8_char
+                                    810 ;	nokia.c: 260: cursor += 8;
+      000364 7B 0C            [ 1]  811 	ld	a, (0x0c, sp)
+      000366 97               [ 1]  812 	ld	xl, a
+                                    813 ;	nokia.c: 261: lcd_draw_8x8_char(big_char_C, cursor, y);
+      000367 7B 12            [ 1]  814 	ld	a, (0x12, sp)
+      000369 88               [ 1]  815 	push	a
+      00036A 9F               [ 1]  816 	ld	a, xl
+      00036B AEr00r50         [ 2]  817 	ldw	x, #(_big_char_C+0)
+      00036E CDr01rE6         [ 4]  818 	call	_lcd_draw_8x8_char
+                                    819 ;	nokia.c: 262: }
+      000371 5B 0F            [ 2]  820 	addw	sp, #15
+      000373 85               [ 2]  821 	popw	x
+      000374 84               [ 1]  822 	pop	a
+      000375 FC               [ 2]  823 	jp	(x)
+                                    824 ;	nokia.c: 267: void main() {
+                                    825 ;	-----------------------------------------
+                                    826 ;	 function main
+                                    827 ;	-----------------------------------------
+      000376                        828 _main:
+                                    829 ;	nokia.c: 269: CLK_CKDIVR = 0x00; // forcer la frequence CPU
+      000376 35 00 50 C6      [ 1]  830 	mov	0x50c6+0, #0x00
+                                    831 ;	nokia.c: 273: PB_DDR &= ~(1 << DS_PIN);    // Direction = entrée
+      00037A 72 1B 50 07      [ 1]  832 	bres	0x5007, #5
+                                    833 ;	nokia.c: 274: PB_CR1 |= (1 << DS_PIN);     // Active le pull-up (résistance interne à Vcc)
+      00037E 72 1A 50 08      [ 1]  834 	bset	0x5008, #5
+                                    835 ;	nokia.c: 278: lcd_init();   // Envoie la séquence d’initialisation au LCD PCD8544
+      000382 CDr01r8E         [ 4]  836 	call	_lcd_init
+                                    837 ;	nokia.c: 279: lcd_clear();  // Efface tout l’écran
+      000385 CDr01rD2         [ 4]  838 	call	_lcd_clear
+                                    839 ;	nokia.c: 282: while (1) {
+      000388                        840 00102$:
+                                    841 ;	nokia.c: 284: ds18b20_start_conversion(); // Envoie la commande "Convert T"
+      000388 CDr01r0B         [ 4]  842 	call	_ds18b20_start_conversion
+                                    843 ;	nokia.c: 285: delay_ms(750);              // Attente du temps de conversion (max 750 ms)
+      00038B AE 02 EE         [ 2]  844 	ldw	x, #0x02ee
+      00038E CDr00r11         [ 4]  845 	call	_delay_ms
+                                    846 ;	nokia.c: 288: int16_t raw = ds18b20_read_raw(); // Lit les 16 bits bruts (valeur signée)
+      000391 CDr01r18         [ 4]  847 	call	_ds18b20_read_raw
+                                    848 ;	nokia.c: 292: int16_t temp_x100 = (raw * 625UL) / 100;
+      000394 90 5F            [ 1]  849 	clrw	y
+      000396 5D               [ 2]  850 	tnzw	x
+      000397 2A 02            [ 1]  851 	jrpl	00111$
+      000399 90 5A            [ 2]  852 	decw	y
+      00039B                        853 00111$:
+      00039B 89               [ 2]  854 	pushw	x
+      00039C 90 89            [ 2]  855 	pushw	y
+      00039E 4B 71            [ 1]  856 	push	#0x71
+      0003A0 4B 02            [ 1]  857 	push	#0x02
+      0003A2 5F               [ 1]  858 	clrw	x
+      0003A3 89               [ 2]  859 	pushw	x
+      0003A4 CDr00r00         [ 4]  860 	call	__mullong
+      0003A7 5B 08            [ 2]  861 	addw	sp, #8
+      0003A9 4B 64            [ 1]  862 	push	#0x64
+      0003AB 4B 00            [ 1]  863 	push	#0x00
+      0003AD 4B 00            [ 1]  864 	push	#0x00
+      0003AF 4B 00            [ 1]  865 	push	#0x00
+      0003B1 89               [ 2]  866 	pushw	x
+      0003B2 90 89            [ 2]  867 	pushw	y
+      0003B4 CDr00r00         [ 4]  868 	call	__divulong
+      0003B7 5B 08            [ 2]  869 	addw	sp, #8
+                                    870 ;	nokia.c: 295: lcd_print_temperature(temp_x100, 16, 16);
+      0003B9 4B 10            [ 1]  871 	push	#0x10
+      0003BB A6 10            [ 1]  872 	ld	a, #0x10
+      0003BD CDr02r97         [ 4]  873 	call	_lcd_print_temperature
+                                    874 ;	nokia.c: 299: delay_ms(1000); // Rafraîchissement toutes les secondes
+      0003C0 AE 03 E8         [ 2]  875 	ldw	x, #0x03e8
+      0003C3 CDr00r11         [ 4]  876 	call	_delay_ms
+      0003C6 20 C0            [ 2]  877 	jra	00102$
+                                    878 ;	nokia.c: 301: }
+      0003C8 81               [ 4]  879 	ret
+                                    880 	.area CODE
+                                    881 	.area CONST
+      000000                        882 _big_digit_0:
+      000000 3C                     883 	.db #0x3c	; 60
+      000001 66                     884 	.db #0x66	; 102	'f'
+      000002 C3                     885 	.db #0xc3	; 195
+      000003 C3                     886 	.db #0xc3	; 195
+      000004 C3                     887 	.db #0xc3	; 195
+      000005 C3                     888 	.db #0xc3	; 195
+      000006 66                     889 	.db #0x66	; 102	'f'
+      000007 3C                     890 	.db #0x3c	; 60
+      000008                        891 _big_digit_1:
+      000008 18                     892 	.db #0x18	; 24
+      000009 38                     893 	.db #0x38	; 56	'8'
+      00000A 78                     894 	.db #0x78	; 120	'x'
+      00000B 18                     895 	.db #0x18	; 24
+      00000C 18                     896 	.db #0x18	; 24
+      00000D 18                     897 	.db #0x18	; 24
+      00000E 18                     898 	.db #0x18	; 24
+      00000F 7E                     899 	.db #0x7e	; 126
+      000010                        900 _big_digit_2:
+      000010 7C                     901 	.db #0x7c	; 124
+      000011 C6                     902 	.db #0xc6	; 198
+      000012 06                     903 	.db #0x06	; 6
+      000013 0C                     904 	.db #0x0c	; 12
+      000014 30                     905 	.db #0x30	; 48	'0'
+      000015 60                     906 	.db #0x60	; 96
+      000016 FE                     907 	.db #0xfe	; 254
+      000017 FE                     908 	.db #0xfe	; 254
+      000018                        909 _big_digit_3:
+      000018 7C                     910 	.db #0x7c	; 124
+      000019 C6                     911 	.db #0xc6	; 198
+      00001A 06                     912 	.db #0x06	; 6
+      00001B 3C                     913 	.db #0x3c	; 60
+      00001C 06                     914 	.db #0x06	; 6
+      00001D 06                     915 	.db #0x06	; 6
+      00001E C6                     916 	.db #0xc6	; 198
+      00001F 7C                     917 	.db #0x7c	; 124
+      000020                        918 _big_digit_4:
+      000020 0C                     919 	.db #0x0c	; 12
+      000021 1C                     920 	.db #0x1c	; 28
+      000022 3C                     921 	.db #0x3c	; 60
+      000023 6C                     922 	.db #0x6c	; 108	'l'
+      000024 CC                     923 	.db #0xcc	; 204
+      000025 FE                     924 	.db #0xfe	; 254
+      000026 0C                     925 	.db #0x0c	; 12
+      000027 0C                     926 	.db #0x0c	; 12
+      000028                        927 _big_digit_5:
+      000028 FE                     928 	.db #0xfe	; 254
+      000029 C0                     929 	.db #0xc0	; 192
+      00002A FC                     930 	.db #0xfc	; 252
+      00002B 06                     931 	.db #0x06	; 6
+      00002C 06                     932 	.db #0x06	; 6
+      00002D 06                     933 	.db #0x06	; 6
+      00002E C6                     934 	.db #0xc6	; 198
+      00002F 7C                     935 	.db #0x7c	; 124
+      000030                        936 _big_digit_6:
+      000030 3C                     937 	.db #0x3c	; 60
+      000031 60                     938 	.db #0x60	; 96
+      000032 C0                     939 	.db #0xc0	; 192
+      000033 FC                     940 	.db #0xfc	; 252
+      000034 C6                     941 	.db #0xc6	; 198
+      000035 C6                     942 	.db #0xc6	; 198
+      000036 66                     943 	.db #0x66	; 102	'f'
+      000037 3C                     944 	.db #0x3c	; 60
+      000038                        945 _big_digit_7:
+      000038 FE                     946 	.db #0xfe	; 254
+      000039 06                     947 	.db #0x06	; 6
+      00003A 0C                     948 	.db #0x0c	; 12
+      00003B 18                     949 	.db #0x18	; 24
+      00003C 30                     950 	.db #0x30	; 48	'0'
+      00003D 60                     951 	.db #0x60	; 96
+      00003E C0                     952 	.db #0xc0	; 192
+      00003F C0                     953 	.db #0xc0	; 192
+      000040                        954 _big_digit_8:
+      000040 7C                     955 	.db #0x7c	; 124
+      000041 C6                     956 	.db #0xc6	; 198
+      000042 C6                     957 	.db #0xc6	; 198
+      000043 7C                     958 	.db #0x7c	; 124
+      000044 C6                     959 	.db #0xc6	; 198
+      000045 C6                     960 	.db #0xc6	; 198
+      000046 C6                     961 	.db #0xc6	; 198
+      000047 7C                     962 	.db #0x7c	; 124
+      000048                        963 _big_digit_9:
+      000048 3C                     964 	.db #0x3c	; 60
+      000049 66                     965 	.db #0x66	; 102	'f'
+      00004A C6                     966 	.db #0xc6	; 198
+      00004B 7E                     967 	.db #0x7e	; 126
+      00004C 06                     968 	.db #0x06	; 6
+      00004D 0C                     969 	.db #0x0c	; 12
+      00004E 18                     970 	.db #0x18	; 24
+      00004F 70                     971 	.db #0x70	; 112	'p'
+      000050                        972 _big_char_C:
+      000050 3E                     973 	.db #0x3e	; 62
+      000051 60                     974 	.db #0x60	; 96
+      000052 C0                     975 	.db #0xc0	; 192
+      000053 C0                     976 	.db #0xc0	; 192
+      000054 C0                     977 	.db #0xc0	; 192
+      000055 C0                     978 	.db #0xc0	; 192
+      000056 60                     979 	.db #0x60	; 96
+      000057 3E                     980 	.db #0x3e	; 62
+      000058                        981 _big_char_dot:
+      000058 00                     982 	.db #0x00	; 0
+      000059 00                     983 	.db #0x00	; 0
+      00005A 00                     984 	.db #0x00	; 0
+      00005B 00                     985 	.db #0x00	; 0
+      00005C 00                     986 	.db #0x00	; 0
+      00005D 00                     987 	.db #0x00	; 0
+      00005E 18                     988 	.db #0x18	; 24
+      00005F 18                     989 	.db #0x18	; 24
+      000060                        990 _big_char_deg:
+      000060 1C                     991 	.db #0x1c	; 28
+      000061 22                     992 	.db #0x22	; 34
+      000062 22                     993 	.db #0x22	; 34
+      000063 1C                     994 	.db #0x1c	; 28
+      000064 00                     995 	.db #0x00	; 0
+      000065 00                     996 	.db #0x00	; 0
+      000066 00                     997 	.db #0x00	; 0
+      000067 00                     998 	.db #0x00	; 0
+      000068                        999 _lcd_print_temperature_minus_262145_71:
+      000068 00                    1000 	.db #0x00	; 0
+      000069 00                    1001 	.db #0x00	; 0
+      00006A 00                    1002 	.db #0x00	; 0
+      00006B FE                    1003 	.db #0xfe	; 254
+      00006C FE                    1004 	.db #0xfe	; 254
+      00006D 00                    1005 	.db #0x00	; 0
+      00006E 00                    1006 	.db #0x00	; 0
+      00006F 00                    1007 	.db #0x00	; 0
+                                   1008 	.area CONST
+      000070                       1009 ___str_0:
+      000070 25 64 2E 25 30 32 64  1010 	.ascii "%d.%02d"
+      000077 00                    1011 	.db 0x00
+                                   1012 	.area CODE
+                                   1013 	.area INITIALIZER
+      000000                       1014 __xinit__big_digits:
+      000000r00r00                 1015 	.dw _big_digit_0
+      000002r00r08                 1016 	.dw _big_digit_1
+      000004r00r10                 1017 	.dw _big_digit_2
+      000006r00r18                 1018 	.dw _big_digit_3
+      000008r00r20                 1019 	.dw _big_digit_4
+      00000Ar00r28                 1020 	.dw _big_digit_5
+      00000Cr00r30                 1021 	.dw _big_digit_6
+      00000Er00r38                 1022 	.dw _big_digit_7
+      000010r00r40                 1023 	.dw _big_digit_8
+      000012r00r48                 1024 	.dw _big_digit_9
+                                   1025 	.area CABS (ABS)
