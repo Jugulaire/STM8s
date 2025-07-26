@@ -230,7 +230,7 @@ void lcd_print_temperature(int16_t temp_x100, uint8_t x, uint8_t y) {
 
     uint8_t cursor = x; // Position de départ
 
-    // Affiche chaque caractère de la chaîne
+    // Affiche chaque caractère de la chaîne 
     for (uint8_t i = 0; buf[i] != '\0'; i++) {
         char c = buf[i];
 

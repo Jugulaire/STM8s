@@ -1,0 +1,705 @@
+                                      1 ;--------------------------------------------------------
+                                      2 ; File Created by SDCC : free open source ANSI-C Compiler
+                                      3 ; Version 4.2.0 #13081 (Linux)
+                                      4 ;--------------------------------------------------------
+                                      5 	.module main
+                                      6 	.optsdcc -mstm8
+                                      7 	
+                                      8 ;--------------------------------------------------------
+                                      9 ; Public variables in this module
+                                     10 ;--------------------------------------------------------
+                                     11 	.globl _digit_to_segment
+                                     12 	.globl _main
+                                     13 	.globl _tm_display_temp_x100
+                                     14 	.globl _tm_set_segments
+                                     15 	.globl _tm_write_byte
+                                     16 	.globl _tm_stop
+                                     17 	.globl _tm_start
+                                     18 	.globl _tm_delay
+                                     19 	.globl _ds18b20_read_raw
+                                     20 	.globl _ds18b20_start_conversion
+                                     21 	.globl _onewire_read_byte
+                                     22 	.globl _onewire_write_byte
+                                     23 	.globl _onewire_read_bit
+                                     24 	.globl _onewire_write_bit
+                                     25 	.globl _onewire_reset
+                                     26 	.globl _delay_us
+                                     27 ;--------------------------------------------------------
+                                     28 ; ram data
+                                     29 ;--------------------------------------------------------
+                                     30 	.area DATA
+                                     31 ;--------------------------------------------------------
+                                     32 ; ram data
+                                     33 ;--------------------------------------------------------
+                                     34 	.area INITIALIZED
+                                     35 ;--------------------------------------------------------
+                                     36 ; Stack segment in internal ram
+                                     37 ;--------------------------------------------------------
+                                     38 	.area	SSEG
+      000000                         39 __start__stack:
+      000000                         40 	.ds	1
+                                     41 
+                                     42 ;--------------------------------------------------------
+                                     43 ; absolute external ram data
+                                     44 ;--------------------------------------------------------
+                                     45 	.area DABS (ABS)
+                                     46 
+                                     47 ; default segment ordering for linker
+                                     48 	.area HOME
+                                     49 	.area GSINIT
+                                     50 	.area GSFINAL
+                                     51 	.area CONST
+                                     52 	.area INITIALIZER
+                                     53 	.area CODE
+                                     54 
+                                     55 ;--------------------------------------------------------
+                                     56 ; interrupt vector
+                                     57 ;--------------------------------------------------------
+                                     58 	.area HOME
+      000000                         59 __interrupt_vect:
+      000000 82v00u00u00             60 	int s_GSINIT ; reset
+                                     61 ;--------------------------------------------------------
+                                     62 ; global & static initialisations
+                                     63 ;--------------------------------------------------------
+                                     64 	.area HOME
+                                     65 	.area GSINIT
+                                     66 	.area GSFINAL
+                                     67 	.area GSINIT
+      000000                         68 __sdcc_init_data:
+                                     69 ; stm8_genXINIT() start
+      000000 AEr00r00         [ 2]   70 	ldw x, #l_DATA
+      000003 27 07            [ 1]   71 	jreq	00002$
+      000005                         72 00001$:
+      000005 72 4FuFFuFF      [ 1]   73 	clr (s_DATA - 1, x)
+      000009 5A               [ 2]   74 	decw x
+      00000A 26 F9            [ 1]   75 	jrne	00001$
+      00000C                         76 00002$:
+      00000C AEr00r00         [ 2]   77 	ldw	x, #l_INITIALIZER
+      00000F 27 09            [ 1]   78 	jreq	00004$
+      000011                         79 00003$:
+      000011 D6uFFuFF         [ 1]   80 	ld	a, (s_INITIALIZER - 1, x)
+      000014 D7uFFuFF         [ 1]   81 	ld	(s_INITIALIZED - 1, x), a
+      000017 5A               [ 2]   82 	decw	x
+      000018 26 F7            [ 1]   83 	jrne	00003$
+      00001A                         84 00004$:
+                                     85 ; stm8_genXINIT() end
+                                     86 	.area GSFINAL
+      000000 CCr00r04         [ 2]   87 	jp	__sdcc_program_startup
+                                     88 ;--------------------------------------------------------
+                                     89 ; Home
+                                     90 ;--------------------------------------------------------
+                                     91 	.area HOME
+                                     92 	.area HOME
+      000004                         93 __sdcc_program_startup:
+      000004 CCr02r6E         [ 2]   94 	jp	_main
+                                     95 ;	return from main will return to caller
+                                     96 ;--------------------------------------------------------
+                                     97 ; code
+                                     98 ;--------------------------------------------------------
+                                     99 	.area CODE
+                                    100 ;	main.c: 31: void delay_us(uint16_t us) {
+                                    101 ;	-----------------------------------------
+                                    102 ;	 function delay_us
+                                    103 ;	-----------------------------------------
+      000000                        104 _delay_us:
+                                    105 ;	main.c: 32: while(us--) {
+      000000                        106 00101$:
+      000000 90 93            [ 1]  107 	ldw	y, x
+      000002 5A               [ 2]  108 	decw	x
+      000003 90 5D            [ 2]  109 	tnzw	y
+      000005 26 01            [ 1]  110 	jrne	00117$
+      000007 81               [ 4]  111 	ret
+      000008                        112 00117$:
+                                    113 ;	main.c: 33: __asm__("nop"); __asm__("nop"); __asm__("nop");
+      000008 9D               [ 1]  114 	nop
+      000009 9D               [ 1]  115 	nop
+      00000A 9D               [ 1]  116 	nop
+                                    117 ;	main.c: 34: __asm__("nop"); __asm__("nop"); __asm__("nop");
+      00000B 9D               [ 1]  118 	nop
+      00000C 9D               [ 1]  119 	nop
+      00000D 9D               [ 1]  120 	nop
+      00000E 20 F0            [ 2]  121 	jra	00101$
+                                    122 ;	main.c: 36: }
+      000010 81               [ 4]  123 	ret
+                                    124 ;	main.c: 39: static inline void delay_ms(uint16_t ms) {
+                                    125 ;	-----------------------------------------
+                                    126 ;	 function delay_ms
+                                    127 ;	-----------------------------------------
+      000011                        128 _delay_ms:
+      000011 52 0A            [ 2]  129 	sub	sp, #10
+      000013 1F 05            [ 2]  130 	ldw	(0x05, sp), x
+                                    131 ;	main.c: 41: for (i = 0; i < ((F_CPU / 18000UL) * ms); i++)
+      000015 5F               [ 1]  132 	clrw	x
+      000016 1F 09            [ 2]  133 	ldw	(0x09, sp), x
+      000018 1F 07            [ 2]  134 	ldw	(0x07, sp), x
+      00001A                        135 00103$:
+      00001A 1E 05            [ 2]  136 	ldw	x, (0x05, sp)
+      00001C 89               [ 2]  137 	pushw	x
+      00001D AE 03 78         [ 2]  138 	ldw	x, #0x0378
+      000020 CDr00r00         [ 4]  139 	call	___muluint2ulong
+      000023 5B 02            [ 2]  140 	addw	sp, #2
+      000025 1F 03            [ 2]  141 	ldw	(0x03, sp), x
+      000027 17 01            [ 2]  142 	ldw	(0x01, sp), y
+      000029 1E 09            [ 2]  143 	ldw	x, (0x09, sp)
+      00002B 13 03            [ 2]  144 	cpw	x, (0x03, sp)
+      00002D 7B 08            [ 1]  145 	ld	a, (0x08, sp)
+      00002F 12 02            [ 1]  146 	sbc	a, (0x02, sp)
+      000031 7B 07            [ 1]  147 	ld	a, (0x07, sp)
+      000033 12 01            [ 1]  148 	sbc	a, (0x01, sp)
+      000035 24 0F            [ 1]  149 	jrnc	00105$
+                                    150 ;	main.c: 42: __asm__("nop");
+      000037 9D               [ 1]  151 	nop
+                                    152 ;	main.c: 41: for (i = 0; i < ((F_CPU / 18000UL) * ms); i++)
+      000038 1E 09            [ 2]  153 	ldw	x, (0x09, sp)
+      00003A 5C               [ 1]  154 	incw	x
+      00003B 1F 09            [ 2]  155 	ldw	(0x09, sp), x
+      00003D 26 DB            [ 1]  156 	jrne	00103$
+      00003F 1E 07            [ 2]  157 	ldw	x, (0x07, sp)
+      000041 5C               [ 1]  158 	incw	x
+      000042 1F 07            [ 2]  159 	ldw	(0x07, sp), x
+      000044 20 D4            [ 2]  160 	jra	00103$
+      000046                        161 00105$:
+                                    162 ;	main.c: 43: }
+      000046 5B 0A            [ 2]  163 	addw	sp, #10
+      000048 81               [ 4]  164 	ret
+                                    165 ;	main.c: 48: uint8_t onewire_reset(void) {
+                                    166 ;	-----------------------------------------
+                                    167 ;	 function onewire_reset
+                                    168 ;	-----------------------------------------
+      000049                        169 _onewire_reset:
+                                    170 ;	main.c: 49: DS_OUTPUT(); DS_LOW();         // Force la ligne à 0 pendant 480µs
+      000049 72 16 50 11      [ 1]  171 	bset	0x5011, #3
+      00004D 72 17 50 0F      [ 1]  172 	bres	0x500f, #3
+                                    173 ;	main.c: 50: delay_us(480);
+      000051 AE 01 E0         [ 2]  174 	ldw	x, #0x01e0
+      000054 CDr00r00         [ 4]  175 	call	_delay_us
+                                    176 ;	main.c: 51: DS_INPUT();                    // Relâche la ligne
+      000057 72 17 50 11      [ 1]  177 	bres	0x5011, #3
+                                    178 ;	main.c: 52: delay_us(70);                  // Attend la réponse du capteur
+      00005B AE 00 46         [ 2]  179 	ldw	x, #0x0046
+      00005E CDr00r00         [ 4]  180 	call	_delay_us
+                                    181 ;	main.c: 53: uint8_t presence = !DS_READ(); // 0 = présence détectée
+      000061 C6 50 10         [ 1]  182 	ld	a, 0x5010
+      000064 4E               [ 1]  183 	swap	a
+      000065 48               [ 1]  184 	sll	a
+      000066 4F               [ 1]  185 	clr	a
+      000067 49               [ 1]  186 	rlc	a
+      000068 A0 01            [ 1]  187 	sub	a, #0x01
+      00006A 4F               [ 1]  188 	clr	a
+      00006B 49               [ 1]  189 	rlc	a
+                                    190 ;	main.c: 54: delay_us(410);                 // Fin du timing 1-Wire
+      00006C 88               [ 1]  191 	push	a
+      00006D AE 01 9A         [ 2]  192 	ldw	x, #0x019a
+      000070 CDr00r00         [ 4]  193 	call	_delay_us
+      000073 84               [ 1]  194 	pop	a
+                                    195 ;	main.c: 55: return presence;
+                                    196 ;	main.c: 56: }
+      000074 81               [ 4]  197 	ret
+                                    198 ;	main.c: 59: void onewire_write_bit(uint8_t bit) {
+                                    199 ;	-----------------------------------------
+                                    200 ;	 function onewire_write_bit
+                                    201 ;	-----------------------------------------
+      000075                        202 _onewire_write_bit:
+      000075 88               [ 1]  203 	push	a
+      000076 6B 01            [ 1]  204 	ld	(0x01, sp), a
+                                    205 ;	main.c: 60: DS_OUTPUT(); DS_LOW();
+      000078 72 16 50 11      [ 1]  206 	bset	0x5011, #3
+      00007C 72 17 50 0F      [ 1]  207 	bres	0x500f, #3
+                                    208 ;	main.c: 61: delay_us(bit ? 6 : 60);        // Bit 1 = pulse court, bit 0 = pulse long
+      000080 0D 01            [ 1]  209 	tnz	(0x01, sp)
+      000082 27 04            [ 1]  210 	jreq	00103$
+      000084 AE 00 06         [ 2]  211 	ldw	x, #0x0006
+      000087 BC                     212 	.byte 0xbc
+      000088                        213 00103$:
+      000088 AE 00 3C         [ 2]  214 	ldw	x, #0x003c
+      00008B                        215 00104$:
+      00008B CDr00r00         [ 4]  216 	call	_delay_us
+                                    217 ;	main.c: 62: DS_INPUT();                    // Libère la ligne
+      00008E 72 17 50 11      [ 1]  218 	bres	0x5011, #3
+                                    219 ;	main.c: 63: delay_us(bit ? 64 : 10);       // Attente avant prochain bit
+      000092 0D 01            [ 1]  220 	tnz	(0x01, sp)
+      000094 27 05            [ 1]  221 	jreq	00105$
+      000096 AE 00 40         [ 2]  222 	ldw	x, #0x0040
+      000099 20 03            [ 2]  223 	jra	00106$
+      00009B                        224 00105$:
+      00009B AE 00 0A         [ 2]  225 	ldw	x, #0x000a
+      00009E                        226 00106$:
+      00009E 84               [ 1]  227 	pop	a
+      00009F CCr00r00         [ 2]  228 	jp	_delay_us
+                                    229 ;	main.c: 64: }
+      0000A2 84               [ 1]  230 	pop	a
+      0000A3 81               [ 4]  231 	ret
+                                    232 ;	main.c: 67: uint8_t onewire_read_bit(void) {
+                                    233 ;	-----------------------------------------
+                                    234 ;	 function onewire_read_bit
+                                    235 ;	-----------------------------------------
+      0000A4                        236 _onewire_read_bit:
+                                    237 ;	main.c: 69: DS_OUTPUT(); DS_LOW();
+      0000A4 72 16 50 11      [ 1]  238 	bset	0x5011, #3
+      0000A8 72 17 50 0F      [ 1]  239 	bres	0x500f, #3
+                                    240 ;	main.c: 70: delay_us(6);                   // Pulse d'initiation de lecture
+      0000AC AE 00 06         [ 2]  241 	ldw	x, #0x0006
+      0000AF CDr00r00         [ 4]  242 	call	_delay_us
+                                    243 ;	main.c: 71: DS_INPUT();                    // Libère la ligne pour lire
+      0000B2 72 17 50 11      [ 1]  244 	bres	0x5011, #3
+                                    245 ;	main.c: 72: delay_us(9);                   // Délai standard
+      0000B6 AE 00 09         [ 2]  246 	ldw	x, #0x0009
+      0000B9 CDr00r00         [ 4]  247 	call	_delay_us
+                                    248 ;	main.c: 73: bit = (DS_READ() ? 1 : 0);     // Lecture du bit
+      0000BC 72 07 50 10 03   [ 2]  249 	btjf	0x5010, #3, 00103$
+      0000C1 5F               [ 1]  250 	clrw	x
+      0000C2 5C               [ 1]  251 	incw	x
+      0000C3 21                     252 	.byte 0x21
+      0000C4                        253 00103$:
+      0000C4 5F               [ 1]  254 	clrw	x
+      0000C5                        255 00104$:
+      0000C5 9F               [ 1]  256 	ld	a, xl
+                                    257 ;	main.c: 74: delay_us(55);                  // Fin du slot
+      0000C6 88               [ 1]  258 	push	a
+      0000C7 AE 00 37         [ 2]  259 	ldw	x, #0x0037
+      0000CA CDr00r00         [ 4]  260 	call	_delay_us
+      0000CD 84               [ 1]  261 	pop	a
+                                    262 ;	main.c: 75: return bit;
+                                    263 ;	main.c: 76: }
+      0000CE 81               [ 4]  264 	ret
+                                    265 ;	main.c: 79: void onewire_write_byte(uint8_t byte) {
+                                    266 ;	-----------------------------------------
+                                    267 ;	 function onewire_write_byte
+                                    268 ;	-----------------------------------------
+      0000CF                        269 _onewire_write_byte:
+      0000CF 52 02            [ 2]  270 	sub	sp, #2
+      0000D1 6B 01            [ 1]  271 	ld	(0x01, sp), a
+                                    272 ;	main.c: 80: for (uint8_t i = 0; i < 8; i++) {
+      0000D3 0F 02            [ 1]  273 	clr	(0x02, sp)
+      0000D5                        274 00103$:
+      0000D5 7B 02            [ 1]  275 	ld	a, (0x02, sp)
+      0000D7 A1 08            [ 1]  276 	cp	a, #0x08
+      0000D9 24 0D            [ 1]  277 	jrnc	00105$
+                                    278 ;	main.c: 81: onewire_write_bit(byte & 0x01); // Envoie le bit LSB
+      0000DB 7B 01            [ 1]  279 	ld	a, (0x01, sp)
+      0000DD A4 01            [ 1]  280 	and	a, #0x01
+      0000DF CDr00r75         [ 4]  281 	call	_onewire_write_bit
+                                    282 ;	main.c: 82: byte >>= 1;
+      0000E2 04 01            [ 1]  283 	srl	(0x01, sp)
+                                    284 ;	main.c: 80: for (uint8_t i = 0; i < 8; i++) {
+      0000E4 0C 02            [ 1]  285 	inc	(0x02, sp)
+      0000E6 20 ED            [ 2]  286 	jra	00103$
+      0000E8                        287 00105$:
+                                    288 ;	main.c: 84: }
+      0000E8 5B 02            [ 2]  289 	addw	sp, #2
+      0000EA 81               [ 4]  290 	ret
+                                    291 ;	main.c: 87: uint8_t onewire_read_byte(void) {
+                                    292 ;	-----------------------------------------
+                                    293 ;	 function onewire_read_byte
+                                    294 ;	-----------------------------------------
+      0000EB                        295 _onewire_read_byte:
+      0000EB 52 02            [ 2]  296 	sub	sp, #2
+                                    297 ;	main.c: 88: uint8_t byte = 0;
+      0000ED 0F 01            [ 1]  298 	clr	(0x01, sp)
+                                    299 ;	main.c: 89: for (uint8_t i = 0; i < 8; i++) {
+      0000EF 0F 02            [ 1]  300 	clr	(0x02, sp)
+      0000F1                        301 00105$:
+      0000F1 7B 02            [ 1]  302 	ld	a, (0x02, sp)
+      0000F3 A1 08            [ 1]  303 	cp	a, #0x08
+      0000F5 24 11            [ 1]  304 	jrnc	00103$
+                                    305 ;	main.c: 90: byte >>= 1;
+      0000F7 04 01            [ 1]  306 	srl	(0x01, sp)
+                                    307 ;	main.c: 91: if (onewire_read_bit()) byte |= 0x80; // Lit MSB en premier
+      0000F9 CDr00rA4         [ 4]  308 	call	_onewire_read_bit
+      0000FC 4D               [ 1]  309 	tnz	a
+      0000FD 27 05            [ 1]  310 	jreq	00106$
+      0000FF 08 01            [ 1]  311 	sll	(0x01, sp)
+      000101 99               [ 1]  312 	scf
+      000102 06 01            [ 1]  313 	rrc	(0x01, sp)
+      000104                        314 00106$:
+                                    315 ;	main.c: 89: for (uint8_t i = 0; i < 8; i++) {
+      000104 0C 02            [ 1]  316 	inc	(0x02, sp)
+      000106 20 E9            [ 2]  317 	jra	00105$
+      000108                        318 00103$:
+                                    319 ;	main.c: 93: return byte;
+      000108 7B 01            [ 1]  320 	ld	a, (0x01, sp)
+                                    321 ;	main.c: 94: }
+      00010A 5B 02            [ 2]  322 	addw	sp, #2
+      00010C 81               [ 4]  323 	ret
+                                    324 ;	main.c: 97: void ds18b20_start_conversion(void) {
+                                    325 ;	-----------------------------------------
+                                    326 ;	 function ds18b20_start_conversion
+                                    327 ;	-----------------------------------------
+      00010D                        328 _ds18b20_start_conversion:
+                                    329 ;	main.c: 98: onewire_reset();
+      00010D CDr00r49         [ 4]  330 	call	_onewire_reset
+                                    331 ;	main.c: 99: onewire_write_byte(0xCC); // Skip ROM (capteur unique sur le bus)
+      000110 A6 CC            [ 1]  332 	ld	a, #0xcc
+      000112 CDr00rCF         [ 4]  333 	call	_onewire_write_byte
+                                    334 ;	main.c: 100: onewire_write_byte(0x44); // Convert T (lance mesure)
+      000115 A6 44            [ 1]  335 	ld	a, #0x44
+                                    336 ;	main.c: 101: }
+      000117 CCr00rCF         [ 2]  337 	jp	_onewire_write_byte
+                                    338 ;	main.c: 104: int16_t ds18b20_read_raw(void) {
+                                    339 ;	-----------------------------------------
+                                    340 ;	 function ds18b20_read_raw
+                                    341 ;	-----------------------------------------
+      00011A                        342 _ds18b20_read_raw:
+      00011A 52 04            [ 2]  343 	sub	sp, #4
+                                    344 ;	main.c: 105: onewire_reset();
+      00011C CDr00r49         [ 4]  345 	call	_onewire_reset
+                                    346 ;	main.c: 106: onewire_write_byte(0xCC); // Skip ROM
+      00011F A6 CC            [ 1]  347 	ld	a, #0xcc
+      000121 CDr00rCF         [ 4]  348 	call	_onewire_write_byte
+                                    349 ;	main.c: 107: onewire_write_byte(0xBE); // Read Scratchpad
+      000124 A6 BE            [ 1]  350 	ld	a, #0xbe
+      000126 CDr00rCF         [ 4]  351 	call	_onewire_write_byte
+                                    352 ;	main.c: 109: uint8_t lsb = onewire_read_byte(); // LSB = partie fractionnaire
+      000129 CDr00rEB         [ 4]  353 	call	_onewire_read_byte
+                                    354 ;	main.c: 110: uint8_t msb = onewire_read_byte(); // MSB = partie entière signée
+      00012C 88               [ 1]  355 	push	a
+      00012D CDr00rEB         [ 4]  356 	call	_onewire_read_byte
+      000130 95               [ 1]  357 	ld	xh, a
+      000131 84               [ 1]  358 	pop	a
+                                    359 ;	main.c: 112: return ((int16_t)msb << 8) | lsb;  // Fusionne les 2 octets
+      000132 0F 02            [ 1]  360 	clr	(0x02, sp)
+      000134 0F 03            [ 1]  361 	clr	(0x03, sp)
+      000136 1A 02            [ 1]  362 	or	a, (0x02, sp)
+      000138 02               [ 1]  363 	rlwa	x
+      000139 1A 03            [ 1]  364 	or	a, (0x03, sp)
+      00013B 95               [ 1]  365 	ld	xh, a
+                                    366 ;	main.c: 113: }
+      00013C 5B 04            [ 2]  367 	addw	sp, #4
+      00013E 81               [ 4]  368 	ret
+                                    369 ;	main.c: 131: void tm_delay() {
+                                    370 ;	-----------------------------------------
+                                    371 ;	 function tm_delay
+                                    372 ;	-----------------------------------------
+      00013F                        373 _tm_delay:
+      00013F 52 02            [ 2]  374 	sub	sp, #2
+                                    375 ;	main.c: 132: for (volatile int i = 0; i < 50; i++) __asm__("nop");
+      000141 5F               [ 1]  376 	clrw	x
+      000142 1F 01            [ 2]  377 	ldw	(0x01, sp), x
+      000144                        378 00103$:
+      000144 1E 01            [ 2]  379 	ldw	x, (0x01, sp)
+      000146 A3 00 32         [ 2]  380 	cpw	x, #0x0032
+      000149 2E 08            [ 1]  381 	jrsge	00105$
+      00014B 9D               [ 1]  382 	nop
+      00014C 1E 01            [ 2]  383 	ldw	x, (0x01, sp)
+      00014E 5C               [ 1]  384 	incw	x
+      00014F 1F 01            [ 2]  385 	ldw	(0x01, sp), x
+      000151 20 F1            [ 2]  386 	jra	00103$
+      000153                        387 00105$:
+                                    388 ;	main.c: 133: }
+      000153 5B 02            [ 2]  389 	addw	sp, #2
+      000155 81               [ 4]  390 	ret
+                                    391 ;	main.c: 135: void tm_start() {
+                                    392 ;	-----------------------------------------
+                                    393 ;	 function tm_start
+                                    394 ;	-----------------------------------------
+      000156                        395 _tm_start:
+                                    396 ;	main.c: 136: TM_DIO_DDR |= (1 << TM_DIO_PIN);
+      000156 72 12 50 02      [ 1]  397 	bset	0x5002, #1
+                                    398 ;	main.c: 137: TM_CLK_DDR |= (1 << TM_CLK_PIN);
+      00015A 72 14 50 02      [ 1]  399 	bset	0x5002, #2
+                                    400 ;	main.c: 138: TM_DIO_PORT |= (1 << TM_DIO_PIN);
+      00015E 72 12 50 00      [ 1]  401 	bset	0x5000, #1
+                                    402 ;	main.c: 139: TM_CLK_PORT |= (1 << TM_CLK_PIN);
+      000162 72 14 50 00      [ 1]  403 	bset	0x5000, #2
+                                    404 ;	main.c: 140: tm_delay();
+      000166 CDr01r3F         [ 4]  405 	call	_tm_delay
+                                    406 ;	main.c: 141: TM_DIO_PORT &= ~(1 << TM_DIO_PIN);
+      000169 72 13 50 00      [ 1]  407 	bres	0x5000, #1
+                                    408 ;	main.c: 142: tm_delay();
+      00016D CDr01r3F         [ 4]  409 	call	_tm_delay
+                                    410 ;	main.c: 143: TM_CLK_PORT &= ~(1 << TM_CLK_PIN);
+      000170 72 15 50 00      [ 1]  411 	bres	0x5000, #2
+                                    412 ;	main.c: 144: }
+      000174 81               [ 4]  413 	ret
+                                    414 ;	main.c: 146: void tm_stop() {
+                                    415 ;	-----------------------------------------
+                                    416 ;	 function tm_stop
+                                    417 ;	-----------------------------------------
+      000175                        418 _tm_stop:
+                                    419 ;	main.c: 147: TM_CLK_PORT &= ~(1 << TM_CLK_PIN);
+      000175 72 15 50 00      [ 1]  420 	bres	0x5000, #2
+                                    421 ;	main.c: 148: TM_DIO_PORT &= ~(1 << TM_DIO_PIN);
+      000179 72 13 50 00      [ 1]  422 	bres	0x5000, #1
+                                    423 ;	main.c: 149: tm_delay();
+      00017D CDr01r3F         [ 4]  424 	call	_tm_delay
+                                    425 ;	main.c: 150: TM_CLK_PORT |= (1 << TM_CLK_PIN);
+      000180 72 14 50 00      [ 1]  426 	bset	0x5000, #2
+                                    427 ;	main.c: 151: tm_delay();
+      000184 CDr01r3F         [ 4]  428 	call	_tm_delay
+                                    429 ;	main.c: 152: TM_DIO_PORT |= (1 << TM_DIO_PIN);
+      000187 72 12 50 00      [ 1]  430 	bset	0x5000, #1
+                                    431 ;	main.c: 153: }
+      00018B 81               [ 4]  432 	ret
+                                    433 ;	main.c: 155: void tm_write_byte(uint8_t b) {
+                                    434 ;	-----------------------------------------
+                                    435 ;	 function tm_write_byte
+                                    436 ;	-----------------------------------------
+      00018C                        437 _tm_write_byte:
+      00018C 52 02            [ 2]  438 	sub	sp, #2
+      00018E 6B 01            [ 1]  439 	ld	(0x01, sp), a
+                                    440 ;	main.c: 156: for (uint8_t i = 0; i < 8; i++) {
+      000190 0F 02            [ 1]  441 	clr	(0x02, sp)
+      000192                        442 00106$:
+                                    443 ;	main.c: 157: TM_CLK_PORT &= ~(1 << TM_CLK_PIN);
+      000192 C6 50 00         [ 1]  444 	ld	a, 0x5000
+      000195 A4 FB            [ 1]  445 	and	a, #0xfb
+                                    446 ;	main.c: 156: for (uint8_t i = 0; i < 8; i++) {
+      000197 88               [ 1]  447 	push	a
+      000198 7B 03            [ 1]  448 	ld	a, (0x03, sp)
+      00019A A1 08            [ 1]  449 	cp	a, #0x08
+      00019C 84               [ 1]  450 	pop	a
+      00019D 24 29            [ 1]  451 	jrnc	00104$
+                                    452 ;	main.c: 157: TM_CLK_PORT &= ~(1 << TM_CLK_PIN);
+      00019F C7 50 00         [ 1]  453 	ld	0x5000, a
+      0001A2 C6 50 00         [ 1]  454 	ld	a, 0x5000
+                                    455 ;	main.c: 158: if (b & 0x01)
+      0001A5 88               [ 1]  456 	push	a
+      0001A6 7B 02            [ 1]  457 	ld	a, (0x02, sp)
+      0001A8 44               [ 1]  458 	srl	a
+      0001A9 84               [ 1]  459 	pop	a
+      0001AA 24 07            [ 1]  460 	jrnc	00102$
+                                    461 ;	main.c: 159: TM_DIO_PORT |= (1 << TM_DIO_PIN);
+      0001AC AA 02            [ 1]  462 	or	a, #0x02
+      0001AE C7 50 00         [ 1]  463 	ld	0x5000, a
+      0001B1 20 05            [ 2]  464 	jra	00103$
+      0001B3                        465 00102$:
+                                    466 ;	main.c: 161: TM_DIO_PORT &= ~(1 << TM_DIO_PIN);
+      0001B3 A4 FD            [ 1]  467 	and	a, #0xfd
+      0001B5 C7 50 00         [ 1]  468 	ld	0x5000, a
+      0001B8                        469 00103$:
+                                    470 ;	main.c: 162: tm_delay();
+      0001B8 CDr01r3F         [ 4]  471 	call	_tm_delay
+                                    472 ;	main.c: 163: TM_CLK_PORT |= (1 << TM_CLK_PIN);
+      0001BB 72 14 50 00      [ 1]  473 	bset	0x5000, #2
+                                    474 ;	main.c: 164: tm_delay();
+      0001BF CDr01r3F         [ 4]  475 	call	_tm_delay
+                                    476 ;	main.c: 165: b >>= 1;
+      0001C2 04 01            [ 1]  477 	srl	(0x01, sp)
+                                    478 ;	main.c: 156: for (uint8_t i = 0; i < 8; i++) {
+      0001C4 0C 02            [ 1]  479 	inc	(0x02, sp)
+      0001C6 20 CA            [ 2]  480 	jra	00106$
+      0001C8                        481 00104$:
+                                    482 ;	main.c: 169: TM_CLK_PORT &= ~(1 << TM_CLK_PIN);
+      0001C8 C7 50 00         [ 1]  483 	ld	0x5000, a
+                                    484 ;	main.c: 170: TM_DIO_DDR &= ~(1 << TM_DIO_PIN); // entrée
+      0001CB 72 13 50 02      [ 1]  485 	bres	0x5002, #1
+                                    486 ;	main.c: 171: tm_delay();
+      0001CF CDr01r3F         [ 4]  487 	call	_tm_delay
+                                    488 ;	main.c: 172: TM_CLK_PORT |= (1 << TM_CLK_PIN);
+      0001D2 72 14 50 00      [ 1]  489 	bset	0x5000, #2
+                                    490 ;	main.c: 173: tm_delay();
+      0001D6 CDr01r3F         [ 4]  491 	call	_tm_delay
+                                    492 ;	main.c: 174: TM_CLK_PORT &= ~(1 << TM_CLK_PIN);
+      0001D9 72 15 50 00      [ 1]  493 	bres	0x5000, #2
+                                    494 ;	main.c: 175: TM_DIO_DDR |= (1 << TM_DIO_PIN); // repasse en sortie
+      0001DD 72 12 50 02      [ 1]  495 	bset	0x5002, #1
+                                    496 ;	main.c: 176: }
+      0001E1 5B 02            [ 2]  497 	addw	sp, #2
+      0001E3 81               [ 4]  498 	ret
+                                    499 ;	main.c: 179: void tm_set_segments(uint8_t *segments, uint8_t length) {
+                                    500 ;	-----------------------------------------
+                                    501 ;	 function tm_set_segments
+                                    502 ;	-----------------------------------------
+      0001E4                        503 _tm_set_segments:
+      0001E4 52 04            [ 2]  504 	sub	sp, #4
+      0001E6 1F 02            [ 2]  505 	ldw	(0x02, sp), x
+      0001E8 6B 01            [ 1]  506 	ld	(0x01, sp), a
+                                    507 ;	main.c: 180: tm_start();
+      0001EA CDr01r56         [ 4]  508 	call	_tm_start
+                                    509 ;	main.c: 181: tm_write_byte(0x40); // Commande : auto-increment mode
+      0001ED A6 40            [ 1]  510 	ld	a, #0x40
+      0001EF CDr01r8C         [ 4]  511 	call	_tm_write_byte
+                                    512 ;	main.c: 182: tm_stop();
+      0001F2 CDr01r75         [ 4]  513 	call	_tm_stop
+                                    514 ;	main.c: 184: tm_start();
+      0001F5 CDr01r56         [ 4]  515 	call	_tm_start
+                                    516 ;	main.c: 185: tm_write_byte(0xC0); // Adresse de départ = 0
+      0001F8 A6 C0            [ 1]  517 	ld	a, #0xc0
+      0001FA CDr01r8C         [ 4]  518 	call	_tm_write_byte
+                                    519 ;	main.c: 186: for (uint8_t i = 0; i < length; i++) {
+      0001FD 0F 04            [ 1]  520 	clr	(0x04, sp)
+      0001FF                        521 00103$:
+      0001FF 7B 04            [ 1]  522 	ld	a, (0x04, sp)
+      000201 11 01            [ 1]  523 	cp	a, (0x01, sp)
+      000203 24 0F            [ 1]  524 	jrnc	00101$
+                                    525 ;	main.c: 187: tm_write_byte(segments[i]);
+      000205 5F               [ 1]  526 	clrw	x
+      000206 7B 04            [ 1]  527 	ld	a, (0x04, sp)
+      000208 97               [ 1]  528 	ld	xl, a
+      000209 72 FB 02         [ 2]  529 	addw	x, (0x02, sp)
+      00020C F6               [ 1]  530 	ld	a, (x)
+      00020D CDr01r8C         [ 4]  531 	call	_tm_write_byte
+                                    532 ;	main.c: 186: for (uint8_t i = 0; i < length; i++) {
+      000210 0C 04            [ 1]  533 	inc	(0x04, sp)
+      000212 20 EB            [ 2]  534 	jra	00103$
+      000214                        535 00101$:
+                                    536 ;	main.c: 189: tm_stop();
+      000214 CDr01r75         [ 4]  537 	call	_tm_stop
+                                    538 ;	main.c: 191: tm_start();
+      000217 CDr01r56         [ 4]  539 	call	_tm_start
+                                    540 ;	main.c: 192: tm_write_byte(0x88 | 0x07); // Affichage ON, luminosité max (0x00 à 0x07)
+      00021A A6 8F            [ 1]  541 	ld	a, #0x8f
+      00021C CDr01r8C         [ 4]  542 	call	_tm_write_byte
+                                    543 ;	main.c: 193: tm_stop();
+      00021F 5B 04            [ 2]  544 	addw	sp, #4
+                                    545 ;	main.c: 194: }
+      000221 CCr01r75         [ 2]  546 	jp	_tm_stop
+                                    547 ;	main.c: 197: void tm_display_temp_x100(int temp_x100) {
+                                    548 ;	-----------------------------------------
+                                    549 ;	 function tm_display_temp_x100
+                                    550 ;	-----------------------------------------
+      000224                        551 _tm_display_temp_x100:
+      000224 52 0A            [ 2]  552 	sub	sp, #10
+                                    553 ;	main.c: 198: int val = temp_x100;
+      000226 1F 05            [ 2]  554 	ldw	(0x05, sp), x
+                                    555 ;	main.c: 199: if (val < 0) val = -val;  // Ignore le signe ici (optionnel à améliorer)
+      000228 5D               [ 2]  556 	tnzw	x
+      000229 2A 03            [ 1]  557 	jrpl	00111$
+      00022B 50               [ 2]  558 	negw	x
+      00022C 1F 05            [ 2]  559 	ldw	(0x05, sp), x
+                                    560 ;	main.c: 203: for (int i = 3; i >= 0; i--) {
+      00022E                        561 00111$:
+      00022E AE 00 03         [ 2]  562 	ldw	x, #0x0003
+      000231 1F 09            [ 2]  563 	ldw	(0x09, sp), x
+      000233                        564 00105$:
+      000233 0D 09            [ 1]  565 	tnz	(0x09, sp)
+      000235 2B 28            [ 1]  566 	jrmi	00103$
+                                    567 ;	main.c: 204: digits[i] = digit_to_segment[val % 10];
+      000237 96               [ 1]  568 	ldw	x, sp
+      000238 5C               [ 1]  569 	incw	x
+      000239 72 FB 09         [ 2]  570 	addw	x, (0x09, sp)
+      00023C 1F 07            [ 2]  571 	ldw	(0x07, sp), x
+      00023E 4B 0A            [ 1]  572 	push	#0x0a
+      000240 4B 00            [ 1]  573 	push	#0x00
+      000242 1E 07            [ 2]  574 	ldw	x, (0x07, sp)
+      000244 CDr00r00         [ 4]  575 	call	__modsint
+      000247 D6u00u00         [ 1]  576 	ld	a, (_digit_to_segment+0, x)
+      00024A 1E 07            [ 2]  577 	ldw	x, (0x07, sp)
+      00024C F7               [ 1]  578 	ld	(x), a
+                                    579 ;	main.c: 205: val /= 10;
+      00024D 4B 0A            [ 1]  580 	push	#0x0a
+      00024F 4B 00            [ 1]  581 	push	#0x00
+      000251 1E 07            [ 2]  582 	ldw	x, (0x07, sp)
+      000253 CDr00r00         [ 4]  583 	call	__divsint
+      000256 1F 05            [ 2]  584 	ldw	(0x05, sp), x
+                                    585 ;	main.c: 203: for (int i = 3; i >= 0; i--) {
+      000258 1E 09            [ 2]  586 	ldw	x, (0x09, sp)
+      00025A 5A               [ 2]  587 	decw	x
+      00025B 1F 09            [ 2]  588 	ldw	(0x09, sp), x
+      00025D 20 D4            [ 2]  589 	jra	00105$
+      00025F                        590 00103$:
+                                    591 ;	main.c: 209: digits[1] |= 0x80;
+      00025F 09 02            [ 1]  592 	rlc	(0x02, sp)
+      000261 99               [ 1]  593 	scf
+      000262 06 02            [ 1]  594 	rrc	(0x02, sp)
+                                    595 ;	main.c: 211: tm_set_segments(digits, 4);
+      000264 A6 04            [ 1]  596 	ld	a, #0x04
+      000266 96               [ 1]  597 	ldw	x, sp
+      000267 5C               [ 1]  598 	incw	x
+      000268 CDr01rE4         [ 4]  599 	call	_tm_set_segments
+                                    600 ;	main.c: 212: }
+      00026B 5B 0A            [ 2]  601 	addw	sp, #10
+      00026D 81               [ 4]  602 	ret
+                                    603 ;	main.c: 215: void main() {
+                                    604 ;	-----------------------------------------
+                                    605 ;	 function main
+                                    606 ;	-----------------------------------------
+      00026E                        607 _main:
+                                    608 ;	main.c: 217: CLK_CKDIVR = 0x00; // forcer la frequence CPU
+      00026E 35 00 50 C6      [ 1]  609 	mov	0x50c6+0, #0x00
+                                    610 ;	main.c: 220: PA_DDR |= (1 << TM_CLK_PIN) | (1 << TM_DIO_PIN); // CLK & DIO en sortie
+      000272 C6 50 02         [ 1]  611 	ld	a, 0x5002
+      000275 AA 06            [ 1]  612 	or	a, #0x06
+      000277 C7 50 02         [ 1]  613 	ld	0x5002, a
+                                    614 ;	main.c: 221: PA_CR1 |= (1 << TM_CLK_PIN) | (1 << TM_DIO_PIN); // Push-pull
+      00027A C6 50 03         [ 1]  615 	ld	a, 0x5003
+      00027D AA 06            [ 1]  616 	or	a, #0x06
+      00027F C7 50 03         [ 1]  617 	ld	0x5003, a
+                                    618 ;	main.c: 223: PD_DDR &= ~(1 << 3);    // PD3 en entrée
+      000282 72 17 50 11      [ 1]  619 	bres	0x5011, #3
+                                    620 ;	main.c: 224: PD_CR1 |= (1 << 3);     // Pull-up interne activée (optionnel)
+      000286 72 16 50 12      [ 1]  621 	bset	0x5012, #3
+                                    622 ;	main.c: 227: while (1) {
+      00028A                        623 00102$:
+                                    624 ;	main.c: 228: ds18b20_start_conversion(); // Démarre une conversion de température
+      00028A CDr01r0D         [ 4]  625 	call	_ds18b20_start_conversion
+                                    626 ;	main.c: 41: for (i = 0; i < ((F_CPU / 18000UL) * ms); i++)
+      00028D 90 5F            [ 1]  627 	clrw	y
+      00028F 5F               [ 1]  628 	clrw	x
+      000290                        629 00109$:
+      000290 90 A3 29 90      [ 2]  630 	cpw	y, #0x2990
+      000294 9F               [ 1]  631 	ld	a, xl
+      000295 A2 0A            [ 1]  632 	sbc	a, #0x0a
+      000297 9E               [ 1]  633 	ld	a, xh
+      000298 A2 00            [ 1]  634 	sbc	a, #0x00
+      00029A 24 08            [ 1]  635 	jrnc	00105$
+                                    636 ;	main.c: 42: __asm__("nop");
+      00029C 9D               [ 1]  637 	nop
+                                    638 ;	main.c: 41: for (i = 0; i < ((F_CPU / 18000UL) * ms); i++)
+      00029D 90 5C            [ 1]  639 	incw	y
+      00029F 26 EF            [ 1]  640 	jrne	00109$
+      0002A1 5C               [ 1]  641 	incw	x
+      0002A2 20 EC            [ 2]  642 	jra	00109$
+                                    643 ;	main.c: 229: delay_ms(750);              // Attente obligatoire (750 ms pour 12 bits)
+      0002A4                        644 00105$:
+                                    645 ;	main.c: 231: int16_t raw = ds18b20_read_raw(); // Lecture de la température brute (x16)
+      0002A4 CDr01r1A         [ 4]  646 	call	_ds18b20_read_raw
+                                    647 ;	main.c: 234: int16_t temp_x100 = (raw * 625UL) / 100; // Résultat en °C * 100
+      0002A7 90 5F            [ 1]  648 	clrw	y
+      0002A9 5D               [ 2]  649 	tnzw	x
+      0002AA 2A 02            [ 1]  650 	jrpl	00144$
+      0002AC 90 5A            [ 2]  651 	decw	y
+      0002AE                        652 00144$:
+      0002AE 89               [ 2]  653 	pushw	x
+      0002AF 90 89            [ 2]  654 	pushw	y
+      0002B1 4B 71            [ 1]  655 	push	#0x71
+      0002B3 4B 02            [ 1]  656 	push	#0x02
+      0002B5 5F               [ 1]  657 	clrw	x
+      0002B6 89               [ 2]  658 	pushw	x
+      0002B7 CDr00r00         [ 4]  659 	call	__mullong
+      0002BA 5B 08            [ 2]  660 	addw	sp, #8
+      0002BC 4B 64            [ 1]  661 	push	#0x64
+      0002BE 4B 00            [ 1]  662 	push	#0x00
+      0002C0 4B 00            [ 1]  663 	push	#0x00
+      0002C2 4B 00            [ 1]  664 	push	#0x00
+      0002C4 89               [ 2]  665 	pushw	x
+      0002C5 90 89            [ 2]  666 	pushw	y
+      0002C7 CDr00r00         [ 4]  667 	call	__divulong
+      0002CA 5B 08            [ 2]  668 	addw	sp, #8
+                                    669 ;	main.c: 237: tm_display_temp_x100(temp_x100);
+      0002CC CDr02r24         [ 4]  670 	call	_tm_display_temp_x100
+                                    671 ;	main.c: 41: for (i = 0; i < ((F_CPU / 18000UL) * ms); i++)
+      0002CF 90 5F            [ 1]  672 	clrw	y
+      0002D1 5F               [ 1]  673 	clrw	x
+      0002D2                        674 00112$:
+      0002D2 90 A3 8C C0      [ 2]  675 	cpw	y, #0x8cc0
+      0002D6 9F               [ 1]  676 	ld	a, xl
+      0002D7 A2 0D            [ 1]  677 	sbc	a, #0x0d
+      0002D9 9E               [ 1]  678 	ld	a, xh
+      0002DA A2 00            [ 1]  679 	sbc	a, #0x00
+      0002DC 24 AC            [ 1]  680 	jrnc	00102$
+                                    681 ;	main.c: 42: __asm__("nop");
+      0002DE 9D               [ 1]  682 	nop
+                                    683 ;	main.c: 41: for (i = 0; i < ((F_CPU / 18000UL) * ms); i++)
+      0002DF 90 5C            [ 1]  684 	incw	y
+      0002E1 26 EF            [ 1]  685 	jrne	00112$
+      0002E3 5C               [ 1]  686 	incw	x
+      0002E4 20 EC            [ 2]  687 	jra	00112$
+                                    688 ;	main.c: 239: delay_ms(1000); // Pause entre chaque mesure
+                                    689 ;	main.c: 241: }
+      0002E6 81               [ 4]  690 	ret
+                                    691 	.area CODE
+                                    692 	.area CONST
+      000000                        693 _digit_to_segment:
+      000000 3F                     694 	.db #0x3f	; 63
+      000001 06                     695 	.db #0x06	; 6
+      000002 5B                     696 	.db #0x5b	; 91
+      000003 4F                     697 	.db #0x4f	; 79	'O'
+      000004 66                     698 	.db #0x66	; 102	'f'
+      000005 6D                     699 	.db #0x6d	; 109	'm'
+      000006 7D                     700 	.db #0x7d	; 125
+      000007 07                     701 	.db #0x07	; 7
+      000008 7F                     702 	.db #0x7f	; 127
+      000009 6F                     703 	.db #0x6f	; 111	'o'
+                                    704 	.area INITIALIZER
+                                    705 	.area CABS (ABS)

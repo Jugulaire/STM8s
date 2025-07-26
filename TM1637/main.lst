@@ -1,0 +1,433 @@
+                                      1 ;--------------------------------------------------------
+                                      2 ; File Created by SDCC : free open source ANSI-C Compiler
+                                      3 ; Version 4.2.0 #13081 (Linux)
+                                      4 ;--------------------------------------------------------
+                                      5 	.module main
+                                      6 	.optsdcc -mstm8
+                                      7 	
+                                      8 ;--------------------------------------------------------
+                                      9 ; Public variables in this module
+                                     10 ;--------------------------------------------------------
+                                     11 	.globl _digit_to_segment
+                                     12 	.globl _main
+                                     13 	.globl _tm_display_temp_x100
+                                     14 	.globl _tm_set_segments
+                                     15 	.globl _tm_write_byte
+                                     16 	.globl _tm_stop
+                                     17 	.globl _tm_start
+                                     18 	.globl _tm_delay
+                                     19 	.globl _delay_ms
+                                     20 	.globl _delay_us
+                                     21 ;--------------------------------------------------------
+                                     22 ; ram data
+                                     23 ;--------------------------------------------------------
+                                     24 	.area DATA
+                                     25 ;--------------------------------------------------------
+                                     26 ; ram data
+                                     27 ;--------------------------------------------------------
+                                     28 	.area INITIALIZED
+                                     29 ;--------------------------------------------------------
+                                     30 ; Stack segment in internal ram
+                                     31 ;--------------------------------------------------------
+                                     32 	.area	SSEG
+      000000                         33 __start__stack:
+      000000                         34 	.ds	1
+                                     35 
+                                     36 ;--------------------------------------------------------
+                                     37 ; absolute external ram data
+                                     38 ;--------------------------------------------------------
+                                     39 	.area DABS (ABS)
+                                     40 
+                                     41 ; default segment ordering for linker
+                                     42 	.area HOME
+                                     43 	.area GSINIT
+                                     44 	.area GSFINAL
+                                     45 	.area CONST
+                                     46 	.area INITIALIZER
+                                     47 	.area CODE
+                                     48 
+                                     49 ;--------------------------------------------------------
+                                     50 ; interrupt vector
+                                     51 ;--------------------------------------------------------
+                                     52 	.area HOME
+      000000                         53 __interrupt_vect:
+      000000 82v00u00u00             54 	int s_GSINIT ; reset
+                                     55 ;--------------------------------------------------------
+                                     56 ; global & static initialisations
+                                     57 ;--------------------------------------------------------
+                                     58 	.area HOME
+                                     59 	.area GSINIT
+                                     60 	.area GSFINAL
+                                     61 	.area GSINIT
+      000000                         62 __sdcc_init_data:
+                                     63 ; stm8_genXINIT() start
+      000000 AEr00r00         [ 2]   64 	ldw x, #l_DATA
+      000003 27 07            [ 1]   65 	jreq	00002$
+      000005                         66 00001$:
+      000005 72 4FuFFuFF      [ 1]   67 	clr (s_DATA - 1, x)
+      000009 5A               [ 2]   68 	decw x
+      00000A 26 F9            [ 1]   69 	jrne	00001$
+      00000C                         70 00002$:
+      00000C AEr00r00         [ 2]   71 	ldw	x, #l_INITIALIZER
+      00000F 27 09            [ 1]   72 	jreq	00004$
+      000011                         73 00003$:
+      000011 D6uFFuFF         [ 1]   74 	ld	a, (s_INITIALIZER - 1, x)
+      000014 D7uFFuFF         [ 1]   75 	ld	(s_INITIALIZED - 1, x), a
+      000017 5A               [ 2]   76 	decw	x
+      000018 26 F7            [ 1]   77 	jrne	00003$
+      00001A                         78 00004$:
+                                     79 ; stm8_genXINIT() end
+                                     80 	.area GSFINAL
+      000000 CCr00r04         [ 2]   81 	jp	__sdcc_program_startup
+                                     82 ;--------------------------------------------------------
+                                     83 ; Home
+                                     84 ;--------------------------------------------------------
+                                     85 	.area HOME
+                                     86 	.area HOME
+      000004                         87 __sdcc_program_startup:
+      000004 CCr01r78         [ 2]   88 	jp	_main
+                                     89 ;	return from main will return to caller
+                                     90 ;--------------------------------------------------------
+                                     91 ; code
+                                     92 ;--------------------------------------------------------
+                                     93 	.area CODE
+                                     94 ;	main.c: 15: void delay_us(uint16_t us) {
+                                     95 ;	-----------------------------------------
+                                     96 ;	 function delay_us
+                                     97 ;	-----------------------------------------
+      000000                         98 _delay_us:
+                                     99 ;	main.c: 16: while(us--) {
+      000000                        100 00101$:
+      000000 90 93            [ 1]  101 	ldw	y, x
+      000002 5A               [ 2]  102 	decw	x
+      000003 90 5D            [ 2]  103 	tnzw	y
+      000005 26 01            [ 1]  104 	jrne	00117$
+      000007 81               [ 4]  105 	ret
+      000008                        106 00117$:
+                                    107 ;	main.c: 17: __asm__("nop"); __asm__("nop"); __asm__("nop");
+      000008 9D               [ 1]  108 	nop
+      000009 9D               [ 1]  109 	nop
+      00000A 9D               [ 1]  110 	nop
+                                    111 ;	main.c: 18: __asm__("nop"); __asm__("nop"); __asm__("nop");
+      00000B 9D               [ 1]  112 	nop
+      00000C 9D               [ 1]  113 	nop
+      00000D 9D               [ 1]  114 	nop
+      00000E 20 F0            [ 2]  115 	jra	00101$
+                                    116 ;	main.c: 20: }
+      000010 81               [ 4]  117 	ret
+                                    118 ;	main.c: 22: void delay_ms(uint16_t ms) {
+                                    119 ;	-----------------------------------------
+                                    120 ;	 function delay_ms
+                                    121 ;	-----------------------------------------
+      000011                        122 _delay_ms:
+      000011 52 0A            [ 2]  123 	sub	sp, #10
+      000013 1F 05            [ 2]  124 	ldw	(0x05, sp), x
+                                    125 ;	main.c: 24: for (i = 0; i < ((F_CPU / 18000UL) * ms); i++)
+      000015 5F               [ 1]  126 	clrw	x
+      000016 1F 09            [ 2]  127 	ldw	(0x09, sp), x
+      000018 1F 07            [ 2]  128 	ldw	(0x07, sp), x
+      00001A                        129 00103$:
+      00001A 1E 05            [ 2]  130 	ldw	x, (0x05, sp)
+      00001C 89               [ 2]  131 	pushw	x
+      00001D AE 03 78         [ 2]  132 	ldw	x, #0x0378
+      000020 CDr00r00         [ 4]  133 	call	___muluint2ulong
+      000023 5B 02            [ 2]  134 	addw	sp, #2
+      000025 1F 03            [ 2]  135 	ldw	(0x03, sp), x
+      000027 17 01            [ 2]  136 	ldw	(0x01, sp), y
+      000029 1E 09            [ 2]  137 	ldw	x, (0x09, sp)
+      00002B 13 03            [ 2]  138 	cpw	x, (0x03, sp)
+      00002D 7B 08            [ 1]  139 	ld	a, (0x08, sp)
+      00002F 12 02            [ 1]  140 	sbc	a, (0x02, sp)
+      000031 7B 07            [ 1]  141 	ld	a, (0x07, sp)
+      000033 12 01            [ 1]  142 	sbc	a, (0x01, sp)
+      000035 24 0F            [ 1]  143 	jrnc	00105$
+                                    144 ;	main.c: 25: __asm__("nop");
+      000037 9D               [ 1]  145 	nop
+                                    146 ;	main.c: 24: for (i = 0; i < ((F_CPU / 18000UL) * ms); i++)
+      000038 1E 09            [ 2]  147 	ldw	x, (0x09, sp)
+      00003A 5C               [ 1]  148 	incw	x
+      00003B 1F 09            [ 2]  149 	ldw	(0x09, sp), x
+      00003D 26 DB            [ 1]  150 	jrne	00103$
+      00003F 1E 07            [ 2]  151 	ldw	x, (0x07, sp)
+      000041 5C               [ 1]  152 	incw	x
+      000042 1F 07            [ 2]  153 	ldw	(0x07, sp), x
+      000044 20 D4            [ 2]  154 	jra	00103$
+      000046                        155 00105$:
+                                    156 ;	main.c: 26: }
+      000046 5B 0A            [ 2]  157 	addw	sp, #10
+      000048 81               [ 4]  158 	ret
+                                    159 ;	main.c: 43: void tm_delay() {
+                                    160 ;	-----------------------------------------
+                                    161 ;	 function tm_delay
+                                    162 ;	-----------------------------------------
+      000049                        163 _tm_delay:
+      000049 52 02            [ 2]  164 	sub	sp, #2
+                                    165 ;	main.c: 44: for (volatile int i = 0; i < 50; i++) __asm__("nop");
+      00004B 5F               [ 1]  166 	clrw	x
+      00004C 1F 01            [ 2]  167 	ldw	(0x01, sp), x
+      00004E                        168 00103$:
+      00004E 1E 01            [ 2]  169 	ldw	x, (0x01, sp)
+      000050 A3 00 32         [ 2]  170 	cpw	x, #0x0032
+      000053 2E 08            [ 1]  171 	jrsge	00105$
+      000055 9D               [ 1]  172 	nop
+      000056 1E 01            [ 2]  173 	ldw	x, (0x01, sp)
+      000058 5C               [ 1]  174 	incw	x
+      000059 1F 01            [ 2]  175 	ldw	(0x01, sp), x
+      00005B 20 F1            [ 2]  176 	jra	00103$
+      00005D                        177 00105$:
+                                    178 ;	main.c: 45: }
+      00005D 5B 02            [ 2]  179 	addw	sp, #2
+      00005F 81               [ 4]  180 	ret
+                                    181 ;	main.c: 47: void tm_start() {
+                                    182 ;	-----------------------------------------
+                                    183 ;	 function tm_start
+                                    184 ;	-----------------------------------------
+      000060                        185 _tm_start:
+                                    186 ;	main.c: 48: TM_DIO_DDR |= (1 << TM_DIO_PIN);
+      000060 72 12 50 02      [ 1]  187 	bset	0x5002, #1
+                                    188 ;	main.c: 49: TM_CLK_DDR |= (1 << TM_CLK_PIN);
+      000064 72 14 50 02      [ 1]  189 	bset	0x5002, #2
+                                    190 ;	main.c: 50: TM_DIO_PORT |= (1 << TM_DIO_PIN);
+      000068 72 12 50 00      [ 1]  191 	bset	0x5000, #1
+                                    192 ;	main.c: 51: TM_CLK_PORT |= (1 << TM_CLK_PIN);
+      00006C 72 14 50 00      [ 1]  193 	bset	0x5000, #2
+                                    194 ;	main.c: 52: tm_delay();
+      000070 CDr00r49         [ 4]  195 	call	_tm_delay
+                                    196 ;	main.c: 53: TM_DIO_PORT &= ~(1 << TM_DIO_PIN);
+      000073 72 13 50 00      [ 1]  197 	bres	0x5000, #1
+                                    198 ;	main.c: 54: tm_delay();
+      000077 CDr00r49         [ 4]  199 	call	_tm_delay
+                                    200 ;	main.c: 55: TM_CLK_PORT &= ~(1 << TM_CLK_PIN);
+      00007A 72 15 50 00      [ 1]  201 	bres	0x5000, #2
+                                    202 ;	main.c: 56: }
+      00007E 81               [ 4]  203 	ret
+                                    204 ;	main.c: 58: void tm_stop() {
+                                    205 ;	-----------------------------------------
+                                    206 ;	 function tm_stop
+                                    207 ;	-----------------------------------------
+      00007F                        208 _tm_stop:
+                                    209 ;	main.c: 59: TM_CLK_PORT &= ~(1 << TM_CLK_PIN);
+      00007F 72 15 50 00      [ 1]  210 	bres	0x5000, #2
+                                    211 ;	main.c: 60: TM_DIO_PORT &= ~(1 << TM_DIO_PIN);
+      000083 72 13 50 00      [ 1]  212 	bres	0x5000, #1
+                                    213 ;	main.c: 61: tm_delay();
+      000087 CDr00r49         [ 4]  214 	call	_tm_delay
+                                    215 ;	main.c: 62: TM_CLK_PORT |= (1 << TM_CLK_PIN);
+      00008A 72 14 50 00      [ 1]  216 	bset	0x5000, #2
+                                    217 ;	main.c: 63: tm_delay();
+      00008E CDr00r49         [ 4]  218 	call	_tm_delay
+                                    219 ;	main.c: 64: TM_DIO_PORT |= (1 << TM_DIO_PIN);
+      000091 72 12 50 00      [ 1]  220 	bset	0x5000, #1
+                                    221 ;	main.c: 65: }
+      000095 81               [ 4]  222 	ret
+                                    223 ;	main.c: 67: void tm_write_byte(uint8_t b) {
+                                    224 ;	-----------------------------------------
+                                    225 ;	 function tm_write_byte
+                                    226 ;	-----------------------------------------
+      000096                        227 _tm_write_byte:
+      000096 52 02            [ 2]  228 	sub	sp, #2
+      000098 6B 01            [ 1]  229 	ld	(0x01, sp), a
+                                    230 ;	main.c: 68: for (uint8_t i = 0; i < 8; i++) {
+      00009A 0F 02            [ 1]  231 	clr	(0x02, sp)
+      00009C                        232 00106$:
+                                    233 ;	main.c: 69: TM_CLK_PORT &= ~(1 << TM_CLK_PIN);
+      00009C C6 50 00         [ 1]  234 	ld	a, 0x5000
+      00009F A4 FB            [ 1]  235 	and	a, #0xfb
+                                    236 ;	main.c: 68: for (uint8_t i = 0; i < 8; i++) {
+      0000A1 88               [ 1]  237 	push	a
+      0000A2 7B 03            [ 1]  238 	ld	a, (0x03, sp)
+      0000A4 A1 08            [ 1]  239 	cp	a, #0x08
+      0000A6 84               [ 1]  240 	pop	a
+      0000A7 24 29            [ 1]  241 	jrnc	00104$
+                                    242 ;	main.c: 69: TM_CLK_PORT &= ~(1 << TM_CLK_PIN);
+      0000A9 C7 50 00         [ 1]  243 	ld	0x5000, a
+      0000AC C6 50 00         [ 1]  244 	ld	a, 0x5000
+                                    245 ;	main.c: 70: if (b & 0x01)
+      0000AF 88               [ 1]  246 	push	a
+      0000B0 7B 02            [ 1]  247 	ld	a, (0x02, sp)
+      0000B2 44               [ 1]  248 	srl	a
+      0000B3 84               [ 1]  249 	pop	a
+      0000B4 24 07            [ 1]  250 	jrnc	00102$
+                                    251 ;	main.c: 71: TM_DIO_PORT |= (1 << TM_DIO_PIN);
+      0000B6 AA 02            [ 1]  252 	or	a, #0x02
+      0000B8 C7 50 00         [ 1]  253 	ld	0x5000, a
+      0000BB 20 05            [ 2]  254 	jra	00103$
+      0000BD                        255 00102$:
+                                    256 ;	main.c: 73: TM_DIO_PORT &= ~(1 << TM_DIO_PIN);
+      0000BD A4 FD            [ 1]  257 	and	a, #0xfd
+      0000BF C7 50 00         [ 1]  258 	ld	0x5000, a
+      0000C2                        259 00103$:
+                                    260 ;	main.c: 74: tm_delay();
+      0000C2 CDr00r49         [ 4]  261 	call	_tm_delay
+                                    262 ;	main.c: 75: TM_CLK_PORT |= (1 << TM_CLK_PIN);
+      0000C5 72 14 50 00      [ 1]  263 	bset	0x5000, #2
+                                    264 ;	main.c: 76: tm_delay();
+      0000C9 CDr00r49         [ 4]  265 	call	_tm_delay
+                                    266 ;	main.c: 77: b >>= 1;
+      0000CC 04 01            [ 1]  267 	srl	(0x01, sp)
+                                    268 ;	main.c: 68: for (uint8_t i = 0; i < 8; i++) {
+      0000CE 0C 02            [ 1]  269 	inc	(0x02, sp)
+      0000D0 20 CA            [ 2]  270 	jra	00106$
+      0000D2                        271 00104$:
+                                    272 ;	main.c: 81: TM_CLK_PORT &= ~(1 << TM_CLK_PIN);
+      0000D2 C7 50 00         [ 1]  273 	ld	0x5000, a
+                                    274 ;	main.c: 82: TM_DIO_DDR &= ~(1 << TM_DIO_PIN); // entrée
+      0000D5 72 13 50 02      [ 1]  275 	bres	0x5002, #1
+                                    276 ;	main.c: 83: tm_delay();
+      0000D9 CDr00r49         [ 4]  277 	call	_tm_delay
+                                    278 ;	main.c: 84: TM_CLK_PORT |= (1 << TM_CLK_PIN);
+      0000DC 72 14 50 00      [ 1]  279 	bset	0x5000, #2
+                                    280 ;	main.c: 85: tm_delay();
+      0000E0 CDr00r49         [ 4]  281 	call	_tm_delay
+                                    282 ;	main.c: 86: TM_CLK_PORT &= ~(1 << TM_CLK_PIN);
+      0000E3 72 15 50 00      [ 1]  283 	bres	0x5000, #2
+                                    284 ;	main.c: 87: TM_DIO_DDR |= (1 << TM_DIO_PIN); // repasse en sortie
+      0000E7 72 12 50 02      [ 1]  285 	bset	0x5002, #1
+                                    286 ;	main.c: 88: }
+      0000EB 5B 02            [ 2]  287 	addw	sp, #2
+      0000ED 81               [ 4]  288 	ret
+                                    289 ;	main.c: 91: void tm_set_segments(uint8_t *segments, uint8_t length) {
+                                    290 ;	-----------------------------------------
+                                    291 ;	 function tm_set_segments
+                                    292 ;	-----------------------------------------
+      0000EE                        293 _tm_set_segments:
+      0000EE 52 04            [ 2]  294 	sub	sp, #4
+      0000F0 1F 02            [ 2]  295 	ldw	(0x02, sp), x
+      0000F2 6B 01            [ 1]  296 	ld	(0x01, sp), a
+                                    297 ;	main.c: 92: tm_start();
+      0000F4 CDr00r60         [ 4]  298 	call	_tm_start
+                                    299 ;	main.c: 93: tm_write_byte(0x40); // Commande : auto-increment mode
+      0000F7 A6 40            [ 1]  300 	ld	a, #0x40
+      0000F9 CDr00r96         [ 4]  301 	call	_tm_write_byte
+                                    302 ;	main.c: 94: tm_stop();
+      0000FC CDr00r7F         [ 4]  303 	call	_tm_stop
+                                    304 ;	main.c: 96: tm_start();
+      0000FF CDr00r60         [ 4]  305 	call	_tm_start
+                                    306 ;	main.c: 97: tm_write_byte(0xC0); // Adresse de départ = 0
+      000102 A6 C0            [ 1]  307 	ld	a, #0xc0
+      000104 CDr00r96         [ 4]  308 	call	_tm_write_byte
+                                    309 ;	main.c: 98: for (uint8_t i = 0; i < length; i++) {
+      000107 0F 04            [ 1]  310 	clr	(0x04, sp)
+      000109                        311 00103$:
+      000109 7B 04            [ 1]  312 	ld	a, (0x04, sp)
+      00010B 11 01            [ 1]  313 	cp	a, (0x01, sp)
+      00010D 24 0F            [ 1]  314 	jrnc	00101$
+                                    315 ;	main.c: 99: tm_write_byte(segments[i]);
+      00010F 5F               [ 1]  316 	clrw	x
+      000110 7B 04            [ 1]  317 	ld	a, (0x04, sp)
+      000112 97               [ 1]  318 	ld	xl, a
+      000113 72 FB 02         [ 2]  319 	addw	x, (0x02, sp)
+      000116 F6               [ 1]  320 	ld	a, (x)
+      000117 CDr00r96         [ 4]  321 	call	_tm_write_byte
+                                    322 ;	main.c: 98: for (uint8_t i = 0; i < length; i++) {
+      00011A 0C 04            [ 1]  323 	inc	(0x04, sp)
+      00011C 20 EB            [ 2]  324 	jra	00103$
+      00011E                        325 00101$:
+                                    326 ;	main.c: 101: tm_stop();
+      00011E CDr00r7F         [ 4]  327 	call	_tm_stop
+                                    328 ;	main.c: 103: tm_start();
+      000121 CDr00r60         [ 4]  329 	call	_tm_start
+                                    330 ;	main.c: 104: tm_write_byte(0x88 | 0x07); // Affichage ON, luminosité max (0x00 à 0x07)
+      000124 A6 8F            [ 1]  331 	ld	a, #0x8f
+      000126 CDr00r96         [ 4]  332 	call	_tm_write_byte
+                                    333 ;	main.c: 105: tm_stop();
+      000129 5B 04            [ 2]  334 	addw	sp, #4
+                                    335 ;	main.c: 106: }
+      00012B CCr00r7F         [ 2]  336 	jp	_tm_stop
+                                    337 ;	main.c: 108: void tm_display_temp_x100(int temp_x100) {
+                                    338 ;	-----------------------------------------
+                                    339 ;	 function tm_display_temp_x100
+                                    340 ;	-----------------------------------------
+      00012E                        341 _tm_display_temp_x100:
+      00012E 52 0A            [ 2]  342 	sub	sp, #10
+                                    343 ;	main.c: 109: int val = temp_x100;
+      000130 1F 05            [ 2]  344 	ldw	(0x05, sp), x
+                                    345 ;	main.c: 110: if (val < 0) val = -val;  // Ignore le signe ici (optionnel à améliorer)
+      000132 5D               [ 2]  346 	tnzw	x
+      000133 2A 03            [ 1]  347 	jrpl	00111$
+      000135 50               [ 2]  348 	negw	x
+      000136 1F 05            [ 2]  349 	ldw	(0x05, sp), x
+                                    350 ;	main.c: 114: for (int i = 3; i >= 0; i--) {
+      000138                        351 00111$:
+      000138 AE 00 03         [ 2]  352 	ldw	x, #0x0003
+      00013B 1F 09            [ 2]  353 	ldw	(0x09, sp), x
+      00013D                        354 00105$:
+      00013D 0D 09            [ 1]  355 	tnz	(0x09, sp)
+      00013F 2B 28            [ 1]  356 	jrmi	00103$
+                                    357 ;	main.c: 115: digits[i] = digit_to_segment[val % 10];
+      000141 96               [ 1]  358 	ldw	x, sp
+      000142 5C               [ 1]  359 	incw	x
+      000143 72 FB 09         [ 2]  360 	addw	x, (0x09, sp)
+      000146 1F 07            [ 2]  361 	ldw	(0x07, sp), x
+      000148 4B 0A            [ 1]  362 	push	#0x0a
+      00014A 4B 00            [ 1]  363 	push	#0x00
+      00014C 1E 07            [ 2]  364 	ldw	x, (0x07, sp)
+      00014E CDr00r00         [ 4]  365 	call	__modsint
+      000151 D6u00u00         [ 1]  366 	ld	a, (_digit_to_segment+0, x)
+      000154 1E 07            [ 2]  367 	ldw	x, (0x07, sp)
+      000156 F7               [ 1]  368 	ld	(x), a
+                                    369 ;	main.c: 116: val /= 10;
+      000157 4B 0A            [ 1]  370 	push	#0x0a
+      000159 4B 00            [ 1]  371 	push	#0x00
+      00015B 1E 07            [ 2]  372 	ldw	x, (0x07, sp)
+      00015D CDr00r00         [ 4]  373 	call	__divsint
+      000160 1F 05            [ 2]  374 	ldw	(0x05, sp), x
+                                    375 ;	main.c: 114: for (int i = 3; i >= 0; i--) {
+      000162 1E 09            [ 2]  376 	ldw	x, (0x09, sp)
+      000164 5A               [ 2]  377 	decw	x
+      000165 1F 09            [ 2]  378 	ldw	(0x09, sp), x
+      000167 20 D4            [ 2]  379 	jra	00105$
+      000169                        380 00103$:
+                                    381 ;	main.c: 120: digits[1] |= 0x80;
+      000169 09 02            [ 1]  382 	rlc	(0x02, sp)
+      00016B 99               [ 1]  383 	scf
+      00016C 06 02            [ 1]  384 	rrc	(0x02, sp)
+                                    385 ;	main.c: 122: tm_set_segments(digits, 4);
+      00016E A6 04            [ 1]  386 	ld	a, #0x04
+      000170 96               [ 1]  387 	ldw	x, sp
+      000171 5C               [ 1]  388 	incw	x
+      000172 CDr00rEE         [ 4]  389 	call	_tm_set_segments
+                                    390 ;	main.c: 123: }
+      000175 5B 0A            [ 2]  391 	addw	sp, #10
+      000177 81               [ 4]  392 	ret
+                                    393 ;	main.c: 128: void main() {
+                                    394 ;	-----------------------------------------
+                                    395 ;	 function main
+                                    396 ;	-----------------------------------------
+      000178                        397 _main:
+                                    398 ;	main.c: 130: CLK_CKDIVR = 0x00; // forcer la frequence CPU
+      000178 35 00 50 C6      [ 1]  399 	mov	0x50c6+0, #0x00
+                                    400 ;	main.c: 132: PA_DDR |= (1 << TM_CLK_PIN) | (1 << TM_DIO_PIN); // CLK & DIO en sortie
+      00017C C6 50 02         [ 1]  401 	ld	a, 0x5002
+      00017F AA 06            [ 1]  402 	or	a, #0x06
+      000181 C7 50 02         [ 1]  403 	ld	0x5002, a
+                                    404 ;	main.c: 133: PA_CR1 |= (1 << TM_CLK_PIN) | (1 << TM_DIO_PIN); // Push-pull
+      000184 C6 50 03         [ 1]  405 	ld	a, 0x5003
+      000187 AA 06            [ 1]  406 	or	a, #0x06
+      000189 C7 50 03         [ 1]  407 	ld	0x5003, a
+                                    408 ;	main.c: 139: while (1) {
+      00018C                        409 00102$:
+                                    410 ;	main.c: 140: tm_display_temp_x100(1337);
+      00018C AE 05 39         [ 2]  411 	ldw	x, #0x0539
+      00018F CDr01r2E         [ 4]  412 	call	_tm_display_temp_x100
+                                    413 ;	main.c: 141: delay_ms(1000);
+      000192 AE 03 E8         [ 2]  414 	ldw	x, #0x03e8
+      000195 CDr00r11         [ 4]  415 	call	_delay_ms
+      000198 20 F2            [ 2]  416 	jra	00102$
+                                    417 ;	main.c: 143: }
+      00019A 81               [ 4]  418 	ret
+                                    419 	.area CODE
+                                    420 	.area CONST
+      000000                        421 _digit_to_segment:
+      000000 3F                     422 	.db #0x3f	; 63
+      000001 06                     423 	.db #0x06	; 6
+      000002 5B                     424 	.db #0x5b	; 91
+      000003 4F                     425 	.db #0x4f	; 79	'O'
+      000004 66                     426 	.db #0x66	; 102	'f'
+      000005 6D                     427 	.db #0x6d	; 109	'm'
+      000006 7D                     428 	.db #0x7d	; 125
+      000007 07                     429 	.db #0x07	; 7
+      000008 7F                     430 	.db #0x7f	; 127
+      000009 6F                     431 	.db #0x6f	; 111	'o'
+                                    432 	.area INITIALIZER
+                                    433 	.area CABS (ABS)
