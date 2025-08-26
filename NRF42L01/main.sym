@@ -1,0 +1,89 @@
+ASxxxx Assembler V02.00 + NoICE + SDCC mods  (STMicroelectronics STM8), page 1.
+Hexadecimal [24-Bits]
+
+Symbol Table
+
+    .__.$$$.                                                    =  002710 L
+    .__.ABS.                                                    =  000000 G
+    .__.CPU.                                                    =  000000 L
+    .__.H$L.                                                    =  000001 L
+  8 _ADDR_NODE1                                                    000000 R
+    ___muluint2ulong                                               ****** GX
+  8 ___str_0                                                       000005 R
+  8 ___str_1                                                       00004E R
+  8 ___str_10                                                      0001AF R
+  8 ___str_11                                                      0001C7 R
+  8 ___str_2                                                       000086 R
+  8 ___str_3                                                       0000D3 R
+  8 ___str_4                                                       00011D R
+  8 ___str_5                                                       00015F R
+  8 ___str_6                                                       000194 R
+  8 ___str_7                                                       0001A1 R
+  8 ___str_8                                                       0001A7 R
+  5 __interrupt_vect                                               000000 R
+  6 __sdcc_init_data                                               000000 R
+  5 __sdcc_program_startup                                         000004 R
+  3 __start__stack                                                 000000 R
+  A _delay_cycles                                                  000037 R
+  A _delay_ms                                                      00004B R
+  A _demo_tx_loop                                                  00063B R
+  A _demo_tx_loop_msg_65536_142                                    0006D6 R
+  A _gpio_init_spi                                                 000083 R
+  A _main                                                          00068E GR
+  A _nrf_bus_ok                                                    0002AE R
+  A _nrf_cmd                                                       00022A R
+  A _nrf_dump_core_regs                                            000321 R
+  A _nrf_dump_fifo                                                 00040B R
+  A _nrf_dump_status                                               0002BD R
+  A _nrf_dump_tx_regs                                              0003CA R
+  A _nrf_prx_start                                                 00053B R
+  A _nrf_ptx_send_ack                                              000638 R
+  A _nrf_ptx_send_noack                                            000635 R
+  A _nrf_ptx_start_ack                                             0004BB R
+  A _nrf_ptx_start_noack                                           0004FB R
+  A _nrf_read_reg                                                  0000D8 R
+  A _nrf_read_reg_n                                                00016C R
+  A _nrf_set_common                                                000469 R
+  A _nrf_status_raw                                                00026D R
+  A _nrf_tx32_and_pulse_ce                                         000583 R
+  A _nrf_write_reg                                                 000122 R
+  A _nrf_write_reg_n                                               0001CC R
+    _printf                                                        ****** GX
+  A _putchar                                                       00002C GR
+    _puts                                                          ****** GX
+  A _spi_init                                                      0000B4 R
+  A _spi_txrx                                                      0000C1 R
+  A _spi_wait_idle                                                 0000D2 R
+  A _uart_config                                                   000000 R
+  A _uart_write                                                    000023 R
+    l_DATA                                                         ****** GX
+    l_INITIALIZER                                                  ****** GX
+ASxxxx Assembler V02.00 + NoICE + SDCC mods  (STMicroelectronics STM8), page 2.
+Hexadecimal [24-Bits]
+
+Symbol Table
+
+    s_DATA                                                         ****** GX
+    s_GSINIT                                                       ****** GX
+    s_INITIALIZED                                                  ****** GX
+    s_INITIALIZER                                                  ****** GX
+
+
+ASxxxx Assembler V02.00 + NoICE + SDCC mods  (STMicroelectronics STM8), page 3.
+Hexadecimal [24-Bits]
+
+Area Table
+
+   0 _CODE                                      size      0   flags    0
+   1 DATA                                       size      0   flags    0
+   2 INITIALIZED                                size      0   flags    0
+   3 SSEG                                       size      1   flags    0
+   4 DABS                                       size      0   flags    8
+   5 HOME                                       size      7   flags    0
+   6 GSINIT                                     size     1A   flags    0
+   7 GSFINAL                                    size      3   flags    0
+   8 CONST                                      size    1FF   flags    0
+   9 INITIALIZER                                size      0   flags    0
+   A CODE                                       size    6DB   flags    0
+   B CABS                                       size      0   flags    8
+
