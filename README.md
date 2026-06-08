@@ -182,15 +182,15 @@ int main() {
 
 Page 31 de la doc on trouve un tableau qui résume les divers registres liée aux GPIO : 
 
-![STM8_gpio_addr](/home/jugu-ubuntu/Documents/writeups/img/STM8_gpio_addr.png)
+![STM8_gpio_addr](img/STM8_gpio_addr.png)
 
 Dans mon cas j'ai connecté une diode sur le port D3 de la carte STM8s : 
 
-![](/home/jugu-ubuntu/Documents/writeups/img/STM8_pinout.png)
+![](img/STM8_pinout.png)
 
 Il faut donc configurer les bons registres pour permettre d'exploiter le Port D en sortie avec les réglages des différents registres.
 
-![portconfig_stm8](/home/jugu-ubuntu/Documents/writeups/img/portconfig_stm8.JPG)
+![portconfig_stm8](img/portconfig_stm8.JPG)
 
 Détaillons ce que font chacun d'entre eux : 
 
@@ -263,7 +263,7 @@ PA_CR2 &= ~(1 << 3);  // Interruption désactivée (pour l’instant)
 ```
 
 > Pour rappel : 
-> ![portconfig_stm8](/home/jugu-ubuntu/Documents/writeups/img/portconfig_stm8.JPG)
+> ![portconfig_stm8](img/portconfig_stm8.JPG)
 
 Il est ensuite possible de récupérer l'état du bouton pour par exemple allumer un LED : 
 
@@ -377,7 +377,7 @@ Nous avons une LED branchée sur PD3 et un bouton sur PA3. Notre interruption ex
 
 Voyons ce que dis la datasheet : 
 
-![portconfig_stm8](/home/jugu-ubuntu/Documents/writeups/img/STM8_External-interrupt.png) 
+![portconfig_stm8](img/STM8_External-interrupt.png) 
 
 La configuration des sources block est la suivante dans mon fichier entête :
 
