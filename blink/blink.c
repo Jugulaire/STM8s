@@ -4,6 +4,7 @@
 
 void main() {
 
+//pb5
   PB_CR1= (1 << 5);
   PB_DDR = (1 << 5);
 

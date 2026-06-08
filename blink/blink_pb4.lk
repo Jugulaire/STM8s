@@ -1,10 +1,10 @@
 -muwx
--i blink.ihx
+-i blink_pb4.ihx
 -b HOME = 0x8000
 -b DATA = 0x0001
 -k /usr/bin/../share/sdcc/lib/stm8
 -k /usr/share/sdcc/lib/stm8
 -l stm8
-blink.rel
+blink_pb4.rel
 
 -e

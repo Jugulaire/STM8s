@@ -1,5 +1,15 @@
 # STM8 et C bas niveau 
 
+Câblage bare minimum pour un STM8s SOP : 
+
+| Fonction | Pin MCU | Connexion              | Composant / Remarque              |
+| -------- | ------- | ---------------------- | --------------------------------- |
+| RESET    | 4       | ST-Link NRST           | Pull-up 10 kΩ vers 3V3 recommandé |
+| GND      | 7       | Masse commune          | Relié GND alim + GND ST-Link      |
+| 3V3      | 9       | Alimentation           | + 100 nF conseillé vers GND       |
+| VCAP     | 8       | Condo vers GND (pin 7) | 1 µF (code 105) obligatoire       |
+| SWIM     | 18      | ST-Link SWIM           | Ligne seule, aucune charge        |
+
 ## Comprendre le décalage de bit et la manipulation de registre 
 
 ### Lire un bit (tester si bit N = 1)
